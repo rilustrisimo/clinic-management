@@ -1,0 +1,58 @@
+{
+  "name": "clinic-management",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "prepare": "husky install",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit --pretty",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch",
+    "e2e": "playwright test",
+    "build": "npm run build:web",
+    "build:web": "npm --prefix apps/web run build",
+    "start": "npm run start:web",
+    "start:web": "npm --prefix apps/web run start",
+    "check:supabase": "node scripts/check_supabase.js",
+    "check:redis": "node scripts/check_redis.js",
+    "check:sentry": "node scripts/check_sentry.js",
+    "check:logtail": "node scripts/check_logtail.js",
+    "check:enc": "node scripts/check_encryption_keys.js",
+    "check:all": "npm -s run check:supabase && npm -s run check:redis && npm -s run check:sentry && npm -s run check:logtail && npm -s run check:enc",
+    "seed:demo": "node scripts/seed-demo.js"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@playwright/test": "^1.47.1",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^22.5.1",
+    "@types/react": "^18.3.5",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.5.4",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-jsx-a11y": "^6.8.0",
+    "eslint-plugin-react": "^7.34.3",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "husky": "^9.1.6",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,md,css,scss,json,vue}": "prettier --write"
+  }
+}
