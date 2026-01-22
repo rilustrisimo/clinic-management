@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "prepare": "node -e \"if (process.env.CI !== 'true') { require('child_process').execSync('husky install', {stdio: 'inherit'}) }\"",
+    "prepare": "node -e \"try { if (!process.env.CI && !process.env.VERCEL) require('child_process').execSync('husky install', {stdio: 'inherit'}) } catch (e) { }\"",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "format": "prettier --write .",
