@@ -11,11 +11,7 @@ export class LoyversePatientSync {
    * Map a Patient from our system to Loyverse Customer format
    */
   private mapPatientToCustomer(patient: any): LoyverseCustomer {
-    const fullName = [
-      patient.firstName,
-      patient.middleName,
-      patient.lastName
-    ]
+    const fullName = [patient.firstName, patient.middleName, patient.lastName]
       .filter(Boolean)
       .join(' ');
 
@@ -77,7 +73,7 @@ export class LoyversePatientSync {
         .from('Patient')
         .update({ loyverse_customer_id: loyverseCustomer.id })
         .eq('id', patientId);
-      
+
       if (updateError) throw updateError;
 
       return {
@@ -109,7 +105,7 @@ export class LoyversePatientSync {
       .from('Patient')
       .select('id')
       .order('"createdAt"', { ascending: true });
-    
+
     if (patientsError) {
       console.error('[LoyverseSync] Error fetching patients:', patientsError);
     }
@@ -151,7 +147,7 @@ export class LoyversePatientSync {
         .select('loyverse_customer_id')
         .eq('id', patientId)
         .single();
-      
+
       if (patientError) throw patientError;
 
       if (!patient?.loyverse_customer_id) {
@@ -193,7 +189,7 @@ export class LoyversePatientSync {
   }> {
     try {
       console.log('[LoyverseSync] Fetching customers from Loyverse...');
-      
+
       const loyverseClient = getLoyverseClient();
       const response = await loyverseClient.getCustomers({ limit: 250 });
       const customers = response.customers || [];
@@ -237,7 +233,7 @@ export class LoyversePatientSync {
    */
   private findPotentialMatches(
     customer: LoyverseCustomer,
-    patients: any[]
+    patients: any[],
   ): Array<{
     id: string;
     firstName: string;
@@ -261,8 +257,11 @@ export class LoyversePatientSync {
       }
 
       // Email match (strong signal)
-      if (customer.email && patient.email && 
-          customer.email.toLowerCase() === patient.email.toLowerCase()) {
+      if (
+        customer.email &&
+        patient.email &&
+        customer.email.toLowerCase() === patient.email.toLowerCase()
+      ) {
         matchScore += 50;
         matchReasons.push('Email match');
       }
@@ -280,12 +279,14 @@ export class LoyversePatientSync {
       if (customer.name && patient.firstName && patient.lastName) {
         const customerName = customer.name.toLowerCase();
         const patientName = `${patient.firstName} ${patient.lastName}`.toLowerCase();
-        
+
         if (customerName === patientName) {
           matchScore += 30;
           matchReasons.push('Exact name match');
-        } else if (customerName.includes(patient.lastName.toLowerCase()) || 
-                   patientName.includes(customer.name.toLowerCase())) {
+        } else if (
+          customerName.includes(patient.lastName.toLowerCase()) ||
+          patientName.includes(customer.name.toLowerCase())
+        ) {
           matchScore += 15;
           matchReasons.push('Partial name match');
         }
@@ -308,9 +309,7 @@ export class LoyversePatientSync {
   /**
    * Import a Loyverse customer as a new patient
    */
-  async importCustomerAsPatient(
-    customer: LoyverseCustomer
-  ): Promise<{
+  async importCustomerAsPatient(customer: LoyverseCustomer): Promise<{
     success: boolean;
     patientId?: string;
     error?: string;
@@ -323,12 +322,16 @@ export class LoyversePatientSync {
       const firstName = nameParts[0] || 'Unknown';
       const lastName = nameParts.slice(1).join(' ') || 'Unknown';
 
+      // Generate patient ID
+      const patientId = `patient_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
       const supabase = getSupabaseClient();
       const { data: patient, error: insertError } = await supabase
         .from('Patient')
         .insert({
-          "firstName": firstName,
-          "lastName": lastName,
+          id: patientId,
+          firstName: firstName,
+          lastName: lastName,
           email: customer.email || null,
           phone: customer.phone_number || null,
           address: customer.address || null,
@@ -337,8 +340,8 @@ export class LoyversePatientSync {
           // Required fields with defaults
           dob: new Date('2000-01-01').toISOString(), // Default DOB - should be updated
           gender: 'unknown',
-          "createdAt": new Date().toISOString(),
-          "updatedAt": new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
         })
         .select()
         .single();
@@ -365,13 +368,15 @@ export class LoyversePatientSync {
    */
   async linkPatientToCustomer(
     patientId: string,
-    loyverseCustomerId: string
+    loyverseCustomerId: string,
   ): Promise<{
     success: boolean;
     error?: string;
   }> {
     try {
-      console.log(`[LoyverseSync] Linking patient ${patientId} to Loyverse customer ${loyverseCustomerId}`);
+      console.log(
+        `[LoyverseSync] Linking patient ${patientId} to Loyverse customer ${loyverseCustomerId}`,
+      );
 
       const supabase = getSupabaseClient();
       const { error: updateError } = await supabase

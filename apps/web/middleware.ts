@@ -6,7 +6,7 @@ export const config = {
     /*
      * Match all request paths except:
      * - /login, /register, /offline (public pages)
-     * - /api/register, /api/echo, /api/time, /api/telemetry, /api/sync (public APIs)  
+     * - /api/register, /api/echo, /api/time, /api/telemetry, /api/sync (public APIs)
      * - /_next/static, /_next/image (Next.js internals)
      * - /favicon.ico, /manifest.webmanifest (public files)
      * - Static files (.svg, .png, .jpg, etc.)
@@ -24,18 +24,19 @@ export async function middleware(req: NextRequest) {
   const publicPaths = [
     '/login',
     '/register',
+    '/reset-password',
     '/offline',
     '/api/register',
     '/api/echo',
     '/api/time',
     '/api/telemetry',
-    '/api/sync',  // Allow sync API for server-side syncing
+    '/api/sync', // Allow sync API for server-side syncing
     '/sw.js',
     '/clientside-sw-bridge.ts',
   ];
 
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
-  
+
   if (isPublicPath) {
     console.log('[Middleware] Public path, allowing:', pathname);
     return NextResponse.next();
@@ -44,7 +45,7 @@ export async function middleware(req: NextRequest) {
   console.log('[Middleware] Protected path, checking auth:', pathname);
 
   let res = NextResponse.next();
-  
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -64,17 +65,20 @@ export async function middleware(req: NextRequest) {
           res.cookies.set({ name, value: '', ...options });
         },
       },
-    }
+    },
   );
 
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  console.log('[Middleware] Auth check result:', { 
-    hasUser: !!user, 
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  console.log('[Middleware] Auth check result:', {
+    hasUser: !!user,
     userId: user?.id,
-    error: error?.message 
+    error: error?.message,
   });
-  
+
   if (!user) {
     console.log('[Middleware] No user found, redirecting to login');
     const url = req.nextUrl.clone();
@@ -82,7 +86,7 @@ export async function middleware(req: NextRequest) {
     url.searchParams.set('redirect', req.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
-  
+
   console.log('[Middleware] User authenticated, allowing access');
   return res;
 }

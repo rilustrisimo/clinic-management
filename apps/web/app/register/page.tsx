@@ -2,7 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Checkbox } from '@clinic/packages-ui';
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Checkbox,
+} from '@clinic/packages-ui';
+import Image from 'next/image';
 
 const ROLES = [
   { id: 'Admin', name: 'Admin' },
@@ -28,9 +39,7 @@ export default function RegisterPage() {
 
   const handleRoleToggle = (roleId: string) => {
     setSelectedRoles((prev) =>
-      prev.includes(roleId)
-        ? prev.filter((id) => id !== roleId)
-        : [...prev, roleId]
+      prev.includes(roleId) ? prev.filter((id) => id !== roleId) : [...prev, roleId],
     );
   };
 
@@ -97,10 +106,20 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className="rounded-2xl border border-gray-200 bg-white/80 p-8 shadow-xl backdrop-blur-xl">
           <div className="mb-6 text-center">
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-              Create User Account
+            <div className="flex justify-center mb-4">
+              <Image
+                src="/sjd-logo.png"
+                alt="San Jose Medical Diagnostics Logo"
+                width={64}
+                height={64}
+                className="rounded-lg"
+              />
+            </div>
+            <h1 className="text-xl font-semibold tracking-tight text-gray-900">
+              San Jose Medical Diagnostics
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-1 text-sm text-gray-600">Create User Account</p>
+            <p className="mt-1 text-xs text-gray-500">
               Development registration - Admin access only in production
             </p>
           </div>
@@ -198,11 +217,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Error Display */}
-            {error && (
-              <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">
-                {error}
-              </div>
-            )}
+            {error && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
             {/* Success Display */}
             {success && (
@@ -212,21 +227,14 @@ export default function RegisterPage() {
             )}
 
             {/* Submit Button */}
-            <Button
-              type="submit"
-              className="h-12 w-full"
-              disabled={loading || success}
-            >
+            <Button type="submit" className="h-12 w-full" disabled={loading || success}>
               {loading ? 'Creating Account...' : 'Create Account'}
             </Button>
 
             {/* Link to Login */}
             <div className="text-center text-sm text-gray-600">
               Already have an account?{' '}
-              <a
-                href="/login"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
+              <a href="/login" className="font-medium text-blue-600 hover:text-blue-500">
                 Sign in
               </a>
             </div>
@@ -234,8 +242,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="mt-4 text-center text-xs text-gray-500">
-          ⚠️ This page should be removed or restricted to admin-only in
-          production
+          ⚠️ This page should be removed or restricted to admin-only in production
         </div>
       </div>
     </div>

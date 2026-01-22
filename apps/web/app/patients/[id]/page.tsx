@@ -1,104 +1,115 @@
-'use client'
+'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useParams, useRouter } from 'next/navigation'
-import { useState } from 'react'
-import { PatientForm } from '../../../components/patients/patient-form'
-import { VersionHistory } from '../../../components/patients/version-history'
-import { AppointmentForm } from '../../../components/appointments/appointment-form'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { PatientForm } from '../../../components/patients/patient-form';
+import { VersionHistory } from '../../../components/patients/version-history';
+import { AppointmentForm } from '../../../components/appointments/appointment-form';
 
 interface Patient {
-  id: string
-  mrn: string | null
-  firstName: string
-  middleName: string | null
-  lastName: string
-  dob: string | null
-  gender: string | null
-  email: string | null
-  phone: string | null
-  address: string | null
-  createdAt: string
-  updatedAt: string
-  age: number
+  id: string;
+  mrn: string | null;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  dob: string | null;
+  gender: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  createdAt: string;
+  updatedAt: string;
+  age: number;
 }
 
 interface Appointment {
-  id: string
-  patientId: string
-  providerId: string | null
-  startsAt: string
-  endsAt: string
-  type: string | null
-  reason: string | null
-  notes: string | null
-  status: string
-  totalPrice?: number
+  id: string;
+  patientId: string;
+  providerId: string | null;
+  startsAt: string;
+  endsAt: string;
+  type: string | null;
+  reason: string | null;
+  notes: string | null;
+  status: string;
+  totalPrice?: number;
+  soapSubjective?: string | null;
+  soapObjective?: string | null;
+  soapAssessment?: string | null;
+  soapPlan?: string | null;
   provider?: {
-    id: string
-    email: string
-    name?: string | null
-  } | null
+    id: string;
+    email: string;
+    name?: string | null;
+  } | null;
   services?: Array<{
-    id: string
-    itemId: string
-    variantId: string
-    itemName: string | null
-    variantName: string | null
-    basePrice: number
+    id: string;
+    itemId: string;
+    variantId: string;
+    itemName: string | null;
+    variantName: string | null;
+    basePrice: number;
     modifiers?: Array<{
-      id: string
-      modifierId: string
-      optionId: string
-      modifierName: string | null
-      optionName: string | null
-      price: number
-    }>
-  }>
+      id: string;
+      modifierId: string;
+      optionId: string;
+      modifierName: string | null;
+      optionName: string | null;
+      price: number;
+    }>;
+  }>;
 }
 
 async function fetchPatient(id: string): Promise<Patient> {
-  const response = await fetch(`/api/patients/${id}`)
+  const response = await fetch(`/api/patients/${id}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch patient')
+    throw new Error('Failed to fetch patient');
   }
-  return response.json()
+  return response.json();
 }
 
-async function fetchPatientAppointments(patientId: string): Promise<{ appointments: Appointment[] }> {
-  const response = await fetch(`/api/appointments?patientId=${patientId}`)
+async function fetchPatientAppointments(
+  patientId: string,
+): Promise<{ appointments: Appointment[] }> {
+  const response = await fetch(`/api/appointments?patientId=${patientId}`);
   if (!response.ok) {
-    throw new Error('Failed to fetch appointments')
+    throw new Error('Failed to fetch appointments');
   }
-  return response.json()
+  return response.json();
 }
 
 function formatDate(dateString: string): string {
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  })
+  });
 }
 
 function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
+  const date = new Date(dateString);
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  })
+  });
 }
 
 function formatTime(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-function getStatusColor(status: string): { bg: string; border: string; text: string; badge: string } {
+function getStatusColor(status: string): {
+  bg: string;
+  border: string;
+  text: string;
+  badge: string;
+} {
   const colors: Record<string, { bg: string; border: string; text: string; badge: string }> = {
     scheduled: {
       bg: 'bg-blue-50 dark:bg-blue-900/20',
@@ -124,53 +135,118 @@ function getStatusColor(status: string): { bg: string; border: string; text: str
       text: 'text-red-700 dark:text-red-300',
       badge: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
     },
-  }
-  return colors[status] || colors.scheduled
+  };
+  return colors[status] || colors.scheduled;
 }
 
 export default function PatientDetailPage() {
-  const params = useParams()
-  const router = useRouter()
-  const queryClient = useQueryClient()
-  const patientId = params.id as string
-  const [showEditDialog, setShowEditDialog] = useState(false)
-  const [showAppointmentDialog, setShowAppointmentDialog] = useState(false)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const params = useParams();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const patientId = params.id as string;
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showAppointmentDialog, setShowAppointmentDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isEditingSOAP, setIsEditingSOAP] = useState(false);
+  const [soapData, setSOAPData] = useState({
+    soapSubjective: '',
+    soapObjective: '',
+    soapAssessment: '',
+    soapPlan: '',
+  });
 
-  const { data: patient, isLoading, error } = useQuery({
+  const {
+    data: patient,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['patient', patientId],
     queryFn: () => fetchPatient(patientId),
-  })
+  });
 
   const { data: appointmentsData } = useQuery({
     queryKey: ['appointments', patientId],
     queryFn: () => fetchPatientAppointments(patientId),
     enabled: !!patientId,
-  })
+  });
 
-  const appointments = (appointmentsData?.appointments || []).sort((a, b) => 
-    new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime()
-  )
+  const appointments = (appointmentsData?.appointments || []).sort(
+    (a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
+  );
 
   const deletePatientMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/patients/${patientId}`, {
         method: 'DELETE',
-      })
-      
+      });
+
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to delete patient')
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete patient');
       }
-      
-      return response.json()
+
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['patients'] })
-      router.push('/patients')
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      router.push('/patients');
     },
-  })
+  });
+
+  const updateSOAPMutation = useMutation({
+    mutationFn: async (data: { appointmentId: string; soapData: typeof soapData }) => {
+      const response = await fetch(`/api/appointments/${data.appointmentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data.soapData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to update SOAP notes');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments', patientId] });
+      setIsEditingSOAP(false);
+    },
+  });
+
+  const handleEditSOAP = () => {
+    if (selectedAppointment) {
+      setSOAPData({
+        soapSubjective: selectedAppointment.soapSubjective || '',
+        soapObjective: selectedAppointment.soapObjective || '',
+        soapAssessment: selectedAppointment.soapAssessment || '',
+        soapPlan: selectedAppointment.soapPlan || '',
+      });
+      setIsEditingSOAP(true);
+    }
+  };
+
+  const handleSaveSOAP = () => {
+    if (selectedAppointment) {
+      updateSOAPMutation.mutate({
+        appointmentId: selectedAppointment.id,
+        soapData,
+      });
+    }
+  };
+
+  const handleCancelSOAP = () => {
+    setIsEditingSOAP(false);
+    if (selectedAppointment) {
+      setSOAPData({
+        soapSubjective: selectedAppointment.soapSubjective || '',
+        soapObjective: selectedAppointment.soapObjective || '',
+        soapAssessment: selectedAppointment.soapAssessment || '',
+        soapPlan: selectedAppointment.soapPlan || '',
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -179,7 +255,7 @@ export default function PatientDetailPage() {
         <div className="border-b border-neutral-200 bg-white px-6 py-4 dark:border-neutral-800 dark:bg-neutral-900">
           <div className="h-8 w-64 animate-pulse rounded bg-neutral-200 dark:bg-neutral-800" />
         </div>
-        
+
         {/* Content Skeleton */}
         <div className="flex-1 overflow-auto bg-neutral-50 p-6 dark:bg-neutral-900">
           <div className="space-y-4">
@@ -192,7 +268,7 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error || !patient) {
@@ -206,7 +282,7 @@ export default function PatientDetailPage() {
             ← Back
           </button>
         </div>
-        
+
         <div className="flex flex-1 items-center justify-center bg-neutral-50 dark:bg-neutral-900">
           <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center dark:border-red-900 dark:bg-red-950">
             <div className="text-4xl">⚠️</div>
@@ -225,7 +301,7 @@ export default function PatientDetailPage() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -240,13 +316,12 @@ export default function PatientDetailPage() {
             ← Back to Patients
           </button>
         </div>
-        
+
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">
-                {patient.firstName}{' '}
-                {patient.middleName && `${patient.middleName} `}
+                {patient.firstName} {patient.middleName && `${patient.middleName} `}
                 {patient.lastName}
               </h1>
               <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400">
@@ -257,21 +332,21 @@ export default function PatientDetailPage() {
               Patient record and medical information
             </p>
           </div>
-          
+
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setShowDeleteConfirm(true)}
               className="h-8 rounded-lg border border-red-300 bg-red-50 px-4 text-[11px] font-medium text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
             >
               Delete
             </button>
-            <button 
+            <button
               onClick={() => setShowEditDialog(true)}
               className="h-8 rounded-lg border border-neutral-300 px-4 text-[11px] font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Edit
             </button>
-            <button 
+            <button
               onClick={() => setShowAppointmentDialog(true)}
               className="h-8 rounded-lg bg-neutral-900 px-4 text-[11px] font-medium text-white hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
             >
@@ -289,7 +364,7 @@ export default function PatientDetailPage() {
             <h2 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-white">
               Demographics
             </h2>
-            
+
             <div className="grid grid-cols-3 gap-6">
               <div>
                 <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -330,7 +405,7 @@ export default function PatientDetailPage() {
             <h2 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-white">
               Contact Information
             </h2>
-            
+
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -366,7 +441,7 @@ export default function PatientDetailPage() {
             <h2 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-white">
               Record Information
             </h2>
-            
+
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
@@ -393,7 +468,7 @@ export default function PatientDetailPage() {
             <h2 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-white">
               Quick Actions
             </h2>
-            
+
             <div className="grid grid-cols-3 gap-3">
               <button className="flex h-20 flex-col items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-center transition-all hover:border-neutral-300 hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-neutral-700 dark:hover:bg-neutral-800">
                 <div className="text-xl">📅</div>
@@ -426,7 +501,7 @@ export default function PatientDetailPage() {
             <h2 className="mb-4 text-sm font-semibold text-neutral-900 dark:text-white">
               Appointment History
             </h2>
-            
+
             {appointments.length === 0 ? (
               <div className="py-8 text-center">
                 <div className="text-4xl">📅</div>
@@ -440,7 +515,7 @@ export default function PatientDetailPage() {
             ) : (
               <div className="space-y-3">
                 {appointments.map((appointment) => {
-                  const colors = getStatusColor(appointment.status)
+                  const colors = getStatusColor(appointment.status);
                   return (
                     <div
                       key={appointment.id}
@@ -452,7 +527,9 @@ export default function PatientDetailPage() {
                             <div className="text-sm font-semibold text-neutral-900 dark:text-white">
                               {formatDate(appointment.startsAt)}
                             </div>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${colors.badge}`}>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${colors.badge}`}
+                            >
                               {appointment.status.replace('_', ' ')}
                             </span>
                           </div>
@@ -466,12 +543,14 @@ export default function PatientDetailPage() {
                           )}
                           {appointment.services && appointment.services.length > 0 && (
                             <div className="mt-2 text-[11px] text-neutral-600 dark:text-neutral-400">
-                              {appointment.services.length} service{appointment.services.length !== 1 ? 's' : ''}
-                              {appointment.totalPrice !== undefined && appointment.totalPrice > 0 && (
-                                <span className="ml-2 font-medium text-green-700 dark:text-green-400">
-                                  ₱{appointment.totalPrice.toFixed(2)}
-                                </span>
-                              )}
+                              {appointment.services.length} service
+                              {appointment.services.length !== 1 ? 's' : ''}
+                              {appointment.totalPrice !== undefined &&
+                                appointment.totalPrice > 0 && (
+                                  <span className="ml-2 font-medium text-green-700 dark:text-green-400">
+                                    ₱{appointment.totalPrice.toFixed(2)}
+                                  </span>
+                                )}
                             </div>
                           )}
                         </div>
@@ -483,7 +562,7 @@ export default function PatientDetailPage() {
                         </button>
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -519,12 +598,7 @@ export default function PatientDetailPage() {
                 onClick={() => setShowEditDialog(false)}
                 className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -541,14 +615,14 @@ export default function PatientDetailPage() {
                 initialData={{
                   firstName: patient.firstName,
                   lastName: patient.lastName,
-                  middleName: patient.middleName || "",
-                  mrn: patient.mrn || "",
-                  dob: patient.dob || "",
-                  gender: patient.gender as "male" | "female" | "other" | undefined,
-                  email: patient.email || "",
-                  phone: patient.phone || "",
-                  addressLine1: patient.address || "",
-                  addressLine2: "",
+                  middleName: patient.middleName || '',
+                  mrn: patient.mrn || '',
+                  dob: patient.dob || '',
+                  gender: patient.gender as 'male' | 'female' | 'other' | undefined,
+                  email: patient.email || '',
+                  phone: patient.phone || '',
+                  addressLine1: patient.address || '',
+                  addressLine2: '',
                 }}
                 onSuccess={() => {
                   setShowEditDialog(false);
@@ -574,13 +648,18 @@ export default function PatientDetailPage() {
                 This action can be undone by contacting support
               </p>
             </div>
-            
+
             <div className="px-6 py-4">
               <p className="text-sm text-neutral-700 dark:text-neutral-300">
-                Are you sure you want to delete <strong>{patient.firstName} {patient.lastName}</strong>?
+                Are you sure you want to delete{' '}
+                <strong>
+                  {patient.firstName} {patient.lastName}
+                </strong>
+                ?
               </p>
               <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
-                This will soft delete the patient record. The data will be hidden but not permanently removed from the database.
+                This will soft delete the patient record. The data will be hidden but not
+                permanently removed from the database.
               </p>
             </div>
 
@@ -621,12 +700,7 @@ export default function PatientDetailPage() {
                 onClick={() => setShowAppointmentDialog(false)}
                 className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
-                <svg
-                  className="h-5 w-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -646,11 +720,11 @@ export default function PatientDetailPage() {
                   mrn: patient.mrn,
                 }}
                 onSuccess={() => {
-                  setShowAppointmentDialog(false)
-                  router.push('/appointments')
+                  setShowAppointmentDialog(false);
+                  router.push('/appointments');
                 }}
                 onCancel={() => {
-                  setShowAppointmentDialog(false)
+                  setShowAppointmentDialog(false);
                 }}
               />
             </div>
@@ -672,11 +746,19 @@ export default function PatientDetailPage() {
                 </p>
               </div>
               <button
-                onClick={() => setSelectedAppointment(null)}
+                onClick={() => {
+                  setSelectedAppointment(null);
+                  setIsEditingSOAP(false);
+                }}
                 className="rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -687,7 +769,9 @@ export default function PatientDetailPage() {
                   Status
                 </div>
                 <div className="mt-1">
-                  <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getStatusColor(selectedAppointment.status).badge}`}>
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getStatusColor(selectedAppointment.status).badge}`}
+                  >
                     {selectedAppointment.status.replace('_', ' ')}
                   </span>
                 </div>
@@ -733,7 +817,10 @@ export default function PatientDetailPage() {
                   </div>
                   <div className="mt-2 space-y-3">
                     {selectedAppointment.services.map((service, idx) => (
-                      <div key={service.id} className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900">
+                      <div
+                        key={service.id}
+                        className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900"
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="text-sm font-medium text-neutral-900 dark:text-white">
@@ -749,7 +836,10 @@ export default function PatientDetailPage() {
                                   Modifiers ({service.modifiers.length})
                                 </div>
                                 {service.modifiers.map((modifier) => (
-                                  <div key={modifier.id} className="flex items-center justify-between text-[11px]">
+                                  <div
+                                    key={modifier.id}
+                                    className="flex items-center justify-between text-[11px]"
+                                  >
                                     <span className="text-neutral-700 dark:text-neutral-300">
                                       {modifier.modifierName}: {modifier.optionName}
                                     </span>
@@ -769,18 +859,19 @@ export default function PatientDetailPage() {
               )}
 
               {/* Total Price */}
-              {selectedAppointment.totalPrice !== undefined && selectedAppointment.totalPrice > 0 && (
-                <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-neutral-900 dark:text-white">
-                      Total Cost
-                    </div>
-                    <div className="text-xl font-bold text-green-700 dark:text-green-400">
-                      ₱{selectedAppointment.totalPrice.toFixed(2)}
+              {selectedAppointment.totalPrice !== undefined &&
+                selectedAppointment.totalPrice > 0 && (
+                  <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold text-neutral-900 dark:text-white">
+                        Total Cost
+                      </div>
+                      <div className="text-xl font-bold text-green-700 dark:text-green-400">
+                        ₱{selectedAppointment.totalPrice.toFixed(2)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Reason */}
               {selectedAppointment.reason && (
@@ -805,10 +896,185 @@ export default function PatientDetailPage() {
                   </div>
                 </div>
               )}
+
+              {/* SOAP Notes Section */}
+              <div className="border-t border-neutral-200 pt-4 dark:border-neutral-800">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                      SOAP Notes
+                    </h3>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      Structured clinical documentation
+                    </p>
+                  </div>
+                  {!isEditingSOAP && (
+                    <button
+                      onClick={handleEditSOAP}
+                      className="rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-medium text-white hover:bg-blue-700 transition-colors"
+                    >
+                      {selectedAppointment.soapSubjective ||
+                      selectedAppointment.soapObjective ||
+                      selectedAppointment.soapAssessment ||
+                      selectedAppointment.soapPlan
+                        ? 'Edit SOAP'
+                        : 'Add SOAP'}
+                    </button>
+                  )}
+                </div>
+
+                {isEditingSOAP ? (
+                  <div className="space-y-4">
+                    {/* Subjective */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                        S - Subjective
+                        <span className="ml-2 font-normal text-neutral-500">
+                          What the patient says
+                        </span>
+                      </label>
+                      <textarea
+                        value={soapData.soapSubjective}
+                        onChange={(e) =>
+                          setSOAPData({ ...soapData, soapSubjective: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white resize-none"
+                        placeholder="Chief complaint, symptoms, duration, severity..."
+                      />
+                    </div>
+
+                    {/* Objective */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                        O - Objective
+                        <span className="ml-2 font-normal text-neutral-500">
+                          What is observed or measured
+                        </span>
+                      </label>
+                      <textarea
+                        value={soapData.soapObjective}
+                        onChange={(e) =>
+                          setSOAPData({ ...soapData, soapObjective: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white resize-none"
+                        placeholder="Vital signs, exam findings, lab results..."
+                      />
+                    </div>
+
+                    {/* Assessment */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                        A - Assessment
+                        <span className="ml-2 font-normal text-neutral-500">
+                          Clinical judgment and diagnosis
+                        </span>
+                      </label>
+                      <textarea
+                        value={soapData.soapAssessment}
+                        onChange={(e) =>
+                          setSOAPData({ ...soapData, soapAssessment: e.target.value })
+                        }
+                        rows={3}
+                        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white resize-none"
+                        placeholder="Primary diagnosis, differential diagnoses..."
+                      />
+                    </div>
+
+                    {/* Plan */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-neutral-700 dark:text-neutral-300 mb-1">
+                        P - Plan
+                        <span className="ml-2 font-normal text-neutral-500">
+                          Treatment plan and follow-up
+                        </span>
+                      </label>
+                      <textarea
+                        value={soapData.soapPlan}
+                        onChange={(e) => setSOAPData({ ...soapData, soapPlan: e.target.value })}
+                        rows={3}
+                        className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white resize-none"
+                        placeholder="Medications, tests to order, referrals, follow-up..."
+                      />
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={handleCancelSOAP}
+                        className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveSOAP}
+                        disabled={updateSOAPMutation.isPending}
+                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {updateSOAPMutation.isPending ? 'Saving...' : 'Save SOAP Notes'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {selectedAppointment.soapSubjective && (
+                      <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                          S - Subjective
+                        </div>
+                        <div className="mt-1 text-sm text-neutral-900 dark:text-white whitespace-pre-wrap">
+                          {selectedAppointment.soapSubjective}
+                        </div>
+                      </div>
+                    )}
+                    {selectedAppointment.soapObjective && (
+                      <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                          O - Objective
+                        </div>
+                        <div className="mt-1 text-sm text-neutral-900 dark:text-white whitespace-pre-wrap">
+                          {selectedAppointment.soapObjective}
+                        </div>
+                      </div>
+                    )}
+                    {selectedAppointment.soapAssessment && (
+                      <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                          A - Assessment
+                        </div>
+                        <div className="mt-1 text-sm text-neutral-900 dark:text-white whitespace-pre-wrap">
+                          {selectedAppointment.soapAssessment}
+                        </div>
+                      </div>
+                    )}
+                    {selectedAppointment.soapPlan && (
+                      <div>
+                        <div className="text-[10px] font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+                          P - Plan
+                        </div>
+                        <div className="mt-1 text-sm text-neutral-900 dark:text-white whitespace-pre-wrap">
+                          {selectedAppointment.soapPlan}
+                        </div>
+                      </div>
+                    )}
+                    {!selectedAppointment.soapSubjective &&
+                      !selectedAppointment.soapObjective &&
+                      !selectedAppointment.soapAssessment &&
+                      !selectedAppointment.soapPlan && (
+                        <div className="rounded-lg bg-neutral-100 p-4 text-center dark:bg-neutral-800">
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                            No SOAP notes recorded for this appointment
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

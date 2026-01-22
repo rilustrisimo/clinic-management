@@ -5,7 +5,7 @@ import { LoyversePatientSync } from '../../../lib/loyverse/sync';
 export async function GET(request: NextRequest) {
   try {
     console.log('[API /api/patients] GET request received');
-    
+
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') || '';
     const limit = parseInt(searchParams.get('limit') || '50');
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('Patient')
       .select('*', { count: 'exact' })
-      .is('deleted_at', null)  // Only get non-deleted patients (use snake_case for Supabase)
+      .is('deleted_at', null) // Only get non-deleted patients (use snake_case for Supabase)
       .order('createdAt', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -26,20 +26,20 @@ export async function GET(request: NextRequest) {
     if (search) {
       query = query.or(
         `firstName.ilike.%${search}%,` +
-        `lastName.ilike.%${search}%,` +
-        `middleName.ilike.%${search}%,` +
-        `mrn.ilike.%${search}%,` +
-        `email.ilike.%${search}%,` +
-        `phone.ilike.%${search}%`
+          `lastName.ilike.%${search}%,` +
+          `middleName.ilike.%${search}%,` +
+          `mrn.ilike.%${search}%,` +
+          `email.ilike.%${search}%,` +
+          `phone.ilike.%${search}%`,
       );
     }
 
     const { data, error: dbError, count } = await query;
-    
+
     if (dbError) {
       throw dbError;
     }
-    
+
     const result = { patients: data || [], total: count || 0 };
 
     console.log(`[API /api/patients] Found ${result.patients.length} of ${result.total} patients`);
@@ -52,10 +52,7 @@ export async function GET(request: NextRequest) {
         const birthDate = new Date(patient.dob);
         age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (
-          monthDiff < 0 ||
-          (monthDiff === 0 && today.getDate() < birthDate.getDate())
-        ) {
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
           age--;
         }
       }
@@ -73,16 +70,15 @@ export async function GET(request: NextRequest) {
         limit,
         offset,
       },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error('[API /api/patients] Error fetching patients:', error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : 'Failed to fetch patients',
+        error: error instanceof Error ? error.message : 'Failed to fetch patients',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -91,7 +87,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     console.log('[API /api/patients] POST body:', body);
-    
+
     const {
       mrn,
       firstName,
@@ -107,32 +103,25 @@ export async function POST(request: NextRequest) {
 
     // Validation (basic - main validation is in the form)
     if (!firstName || !lastName) {
-      return NextResponse.json(
-        { error: 'First name and last name are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'First name and last name are required' }, { status: 400 });
     }
 
     if (!dob) {
-      return NextResponse.json(
-        { error: 'Date of birth is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Date of birth is required' }, { status: 400 });
     }
 
     if (!gender) {
-      return NextResponse.json(
-        { error: 'Gender is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Gender is required' }, { status: 400 });
     }
 
     // Combine address lines
-    const address = [addressLine1, addressLine2]
-      .filter(Boolean)
-      .join(', ') || null;
+    const address = [addressLine1, addressLine2].filter(Boolean).join(', ') || null;
+
+    // Generate unique patient ID
+    const patientId = `patient_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     const patientData = {
+      id: patientId,
       mrn: mrn || null,
       firstName,
       lastName,
@@ -146,7 +135,9 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    console.log('[API /api/patients] Creating patient in Supabase (writes must use primary DB only)...');
+    console.log(
+      '[API /api/patients] Creating patient in Supabase (writes must use primary DB only)...',
+    );
     console.log('[API /api/patients] Data to insert:', patientData);
 
     // For WRITE operations, we MUST use Supabase only - no fallback to local DB
@@ -160,10 +151,10 @@ export async function POST(request: NextRequest) {
           persistSession: false,
           autoRefreshToken: false,
         },
-      }
+      },
     );
 
-    // Insert into Supabase (ID will be auto-generated)
+    // Insert into Supabase with explicit ID
     const { data: patient, error: insertError } = await supabase
       .from('Patient')
       .insert({
@@ -181,21 +172,19 @@ export async function POST(request: NextRequest) {
     console.log('[API /api/patients] Patient created in Supabase:', patient.id);
 
     // Create initial version
-    const { error: versionError } = await supabase
-      .from('PatientVersion')
-      .insert({
-        patientId: patient.id,
-        firstName: patient.firstName,
-        lastName: patient.lastName,
-        middleName: patient.middleName,
-        dob: patient.dob,
-        gender: patient.gender,
-        phone: patient.phone,
-        email: patient.email,
-        address: patient.address,
-        reason: 'Initial record creation',
-        authorId: null,
-      });
+    const { error: versionError } = await supabase.from('PatientVersion').insert({
+      patientId: patient.id,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      middleName: patient.middleName,
+      dob: patient.dob,
+      gender: patient.gender,
+      phone: patient.phone,
+      email: patient.email,
+      address: patient.address,
+      reason: 'Initial record creation',
+      authorId: null,
+    });
 
     if (versionError) {
       console.error('[API /api/patients] Version creation error:', versionError);
@@ -208,11 +197,15 @@ export async function POST(request: NextRequest) {
     console.log('[API /api/patients] Auto-syncing patient to Loyverse...');
     const loyverseSync = new LoyversePatientSync();
     const syncResult = await loyverseSync.syncPatient(patient.id);
-    
+
     if (syncResult.success) {
-      console.log(`[API /api/patients] ✅ Patient synced to Loyverse: ${syncResult.loyverseCustomerId}`);
+      console.log(
+        `[API /api/patients] ✅ Patient synced to Loyverse: ${syncResult.loyverseCustomerId}`,
+      );
     } else {
-      console.error(`[API /api/patients] ⚠️ Loyverse sync failed (patient still created): ${syncResult.error}`);
+      console.error(
+        `[API /api/patients] ⚠️ Loyverse sync failed (patient still created): ${syncResult.error}`,
+      );
       // Don't throw - patient was created successfully, Loyverse sync can be retried later
     }
 
@@ -224,16 +217,15 @@ export async function POST(request: NextRequest) {
         loyverseSynced: syncResult.success,
         loyverseCustomerId: syncResult.loyverseCustomerId,
       },
-      { status: 201 }
+      { status: 201 },
     );
   } catch (error) {
     console.error('[API /api/patients] Error creating patient:', error);
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : 'Failed to create patient',
+        error: error instanceof Error ? error.message : 'Failed to create patient',
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

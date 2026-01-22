@@ -1,9 +1,10 @@
-"use client";
+'use client';
 import { Button } from '@clinic/packages-ui';
 import { useEffect, useState } from 'react';
 import { useA2HS } from '../../app/a2hs-bridge';
 import { useAuth } from '../auth/AuthProvider';
 import { useQueuedCount } from '../../lib/queueBadge';
+import Image from 'next/image';
 
 export function TopBar() {
   const { canPrompt, promptInstall } = useA2HS();
@@ -27,20 +28,38 @@ export function TopBar() {
 
   return (
     <header className="h-12 border-b border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md flex items-center px-4 gap-2 sticky top-0 z-40">
-      {/* Logo */}
-      <div className="font-semibold text-sm text-neutral-900 dark:text-white">Clinic</div>
-      
+      {/* Logo & Clinic Name */}
+      <div className="flex items-center gap-2">
+        <Image
+          src="/sjd-logo.png"
+          alt="San Jose Medical Diagnostics Logo"
+          width={28}
+          height={28}
+          className="rounded"
+        />
+        <div className="flex flex-col">
+          <span className="text-xs font-semibold text-neutral-900 dark:text-white leading-tight">
+            San Jose Medical Diagnostics
+          </span>
+          <span className="text-[9px] text-neutral-500 dark:text-neutral-400 leading-tight hidden sm:block">
+            Brgy 5, Talakag, Bukidnon
+          </span>
+        </div>
+      </div>
+
       {/* Spacer */}
       <div className="flex-1" />
-      
+
       {/* Network Status - Only show when offline */}
       {!online && (
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-orange-50 dark:bg-orange-950/50 border border-orange-200 dark:border-orange-800">
           <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-          <span className="text-[11px] font-medium text-orange-700 dark:text-orange-300">Offline</span>
+          <span className="text-[11px] font-medium text-orange-700 dark:text-orange-300">
+            Offline
+          </span>
         </div>
       )}
-      
+
       {/* Queue Status - Only show when there are queued items */}
       {queued > 0 && (
         <div className="relative">
@@ -49,16 +68,19 @@ export function TopBar() {
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
             <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">{queued} queued</span>
+            <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">
+              {queued} queued
+            </span>
           </button>
-          
+
           {showQueue && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setShowQueue(false)} />
               <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-lg p-3 z-50">
                 <div className="text-xs space-y-1">
                   <div className="text-neutral-600 dark:text-neutral-400">
-                    Queued mutations: <span className="font-medium text-neutral-900 dark:text-white">{queued}</span>
+                    Queued mutations:{' '}
+                    <span className="font-medium text-neutral-900 dark:text-white">{queued}</span>
                   </div>
                 </div>
               </div>
@@ -66,43 +88,38 @@ export function TopBar() {
           )}
         </div>
       )}
-      
+
       {/* Install App Button */}
       {canPrompt && (
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={promptInstall}
           className="text-[11px] h-7 px-2.5"
         >
           Install App
         </Button>
       )}
-      
+
       {/* User Info & Auth */}
       {session ? (
         <>
           <span className="text-[11px] text-neutral-600 dark:text-neutral-400 hidden sm:inline">
             {session.user.email}
           </span>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={signOut}
-            className="text-[11px] h-7 px-2.5"
-          >
+          <Button variant="outline" size="sm" onClick={signOut} className="text-[11px] h-7 px-2.5">
             Sign Out
           </Button>
         </>
       ) : (
-        <a 
-          href="/login" 
+        <a
+          href="/login"
           className="text-[11px] text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors px-2.5"
         >
           Sign In
         </a>
       )}
-      
+
       {/* Command Palette Trigger */}
       <button
         title="Command palette (⌘K)"
@@ -115,7 +132,7 @@ export function TopBar() {
       >
         <span className="text-[11px] font-mono text-neutral-600 dark:text-neutral-400">⌘K</span>
       </button>
-      
+
       {/* Notifications */}
       <div className="relative">
         <button
@@ -125,7 +142,7 @@ export function TopBar() {
         >
           <span className="text-sm">🔔</span>
         </button>
-        
+
         {showNotifications && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />

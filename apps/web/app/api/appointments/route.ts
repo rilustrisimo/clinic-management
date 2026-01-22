@@ -1,34 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getSupabaseClient } from '../../../lib/db/client'
-import { randomUUID } from 'crypto'
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseClient } from '../../../lib/db/client';
+import { randomUUID } from 'crypto';
 
 // GET /api/appointments - List appointments with filters
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const date = searchParams.get('date') // YYYY-MM-DD format
-    const patientId = searchParams.get('patientId')
-    const providerId = searchParams.get('providerId')
-    const status = searchParams.get('status')
-    const view = searchParams.get('view') || 'day' // day, week, month
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get('date'); // YYYY-MM-DD format
+    const patientId = searchParams.get('patientId');
+    const providerId = searchParams.get('providerId');
+    const status = searchParams.get('status');
+    const view = searchParams.get('view') || 'day'; // day, week, month
 
-    console.log('[API /api/appointments] GET request', { date, patientId, providerId, status, view })
+    console.log('[API /api/appointments] GET request', {
+      date,
+      patientId,
+      providerId,
+      status,
+      view,
+    });
 
     // Helper to format date without timezone conversion
     const formatLocal = (d: Date) => {
-      const year = d.getFullYear()
-      const month = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      const hours = String(d.getHours()).padStart(2, '0')
-      const minutes = String(d.getMinutes()).padStart(2, '0')
-      const seconds = String(d.getSeconds()).padStart(2, '0')
-      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
-    }
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
 
-    const supabase = getSupabaseClient()
+    const supabase = getSupabaseClient();
     let query = supabase
       .from('Appointment')
-      .select(`
+      .select(
+        `
         *,
         Patient (
           id,
@@ -42,105 +49,115 @@ export async function GET(request: NextRequest) {
           email,
           name
         )
-      `)
-      .order('startsAt', { ascending: true })
+      `,
+      )
+      .order('startsAt', { ascending: true });
 
     // Filter by date/date range based on view
     if (date) {
-      const targetDate = new Date(date)
-      console.log('[API] Target date:', targetDate.toISOString())
-      
+      const targetDate = new Date(date);
+      console.log('[API] Target date:', targetDate.toISOString());
+
       if (view === 'day') {
-        const startOfDay = new Date(targetDate)
-        startOfDay.setHours(0, 0, 0, 0)
-        const endOfDay = new Date(targetDate)
-        endOfDay.setHours(23, 59, 59, 999)
-        
-        const startStr = formatLocal(startOfDay)
-        const endStr = formatLocal(endOfDay)
-        
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const startStr = formatLocal(startOfDay);
+        const endStr = formatLocal(endOfDay);
+
         console.log('[API] Day range (local):', {
           start: startStr,
-          end: endStr
-        })
-        
-        query = query
-          .gte('startsAt', startStr)
-          .lte('startsAt', endStr)
+          end: endStr,
+        });
+
+        query = query.gte('startsAt', startStr).lte('startsAt', endStr);
       } else if (view === 'week') {
         // Get start of week (Sunday)
-        const startOfWeek = new Date(targetDate)
-        startOfWeek.setDate(targetDate.getDate() - targetDate.getDay())
-        startOfWeek.setHours(0, 0, 0, 0)
-        
-        const endOfWeek = new Date(startOfWeek)
-        endOfWeek.setDate(startOfWeek.getDate() + 6)
-        endOfWeek.setHours(23, 59, 59, 999)
-        
+        const startOfWeek = new Date(targetDate);
+        startOfWeek.setDate(targetDate.getDate() - targetDate.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
         query = query
           .gte('startsAt', formatLocal(startOfWeek))
-          .lte('startsAt', formatLocal(endOfWeek))
+          .lte('startsAt', formatLocal(endOfWeek));
       } else if (view === 'month') {
-        const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1)
-        const endOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59, 999)
-        
+        const startOfMonth = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+        const endOfMonth = new Date(
+          targetDate.getFullYear(),
+          targetDate.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999,
+        );
+
         query = query
           .gte('startsAt', formatLocal(startOfMonth))
-          .lte('startsAt', formatLocal(endOfMonth))
+          .lte('startsAt', formatLocal(endOfMonth));
       }
     }
 
     if (patientId) {
-      query = query.eq('patientId', patientId)
+      query = query.eq('patientId', patientId);
     }
 
     if (providerId) {
-      query = query.eq('providerId', providerId)
+      query = query.eq('providerId', providerId);
     }
 
     if (status) {
-      query = query.eq('status', status)
+      query = query.eq('status', status);
     }
 
-    const { data: appointments, error } = await query
+    const { data: appointments, error } = await query;
 
     if (error) {
-      console.error('[API /api/appointments] Error:', error)
-      throw error
+      console.error('[API /api/appointments] Error:', error);
+      throw error;
     }
 
-    console.log(`[API /api/appointments] Found ${appointments?.length || 0} appointments`)
-    console.log('[API /api/appointments] First appointment:', JSON.stringify(appointments?.[0], null, 2))
+    console.log(`[API /api/appointments] Found ${appointments?.length || 0} appointments`);
+    console.log(
+      '[API /api/appointments] First appointment:',
+      JSON.stringify(appointments?.[0], null, 2),
+    );
 
     // Fetch services and modifiers for all appointments
-    const appointmentIds = (appointments || []).map((apt: any) => apt.id)
-    
-    let servicesWithModifiers: any[] = []
+    const appointmentIds = (appointments || []).map((apt: any) => apt.id);
+
+    let servicesWithModifiers: any[] = [];
     if (appointmentIds.length > 0) {
       // Fetch services
       const { data: services } = await supabase
         .from('AppointmentService')
         .select('*')
-        .in('appointmentId', appointmentIds)
-      
+        .in('appointmentId', appointmentIds);
+
       // Fetch modifiers for these services
-      const serviceIds = (services || []).map((s: any) => s.id)
-      let modifiers: any[] = []
-      
+      const serviceIds = (services || []).map((s: any) => s.id);
+      let modifiers: any[] = [];
+
       if (serviceIds.length > 0) {
         const { data: fetchedModifiers } = await supabase
           .from('AppointmentServiceModifier')
           .select('*')
-          .in('appointmentServiceId', serviceIds)
-        
-        modifiers = fetchedModifiers || []
+          .in('appointmentServiceId', serviceIds);
+
+        modifiers = fetchedModifiers || [];
       }
-      
+
       // Combine services with their modifiers
       servicesWithModifiers = (services || []).map((service: any) => ({
         ...service,
-        modifiers: modifiers.filter((m: any) => m.appointmentServiceId === service.id)
-      }))
+        modifiers: modifiers.filter((m: any) => m.appointmentServiceId === service.id),
+      }));
     }
 
     // Normalize response: map User to provider and add services
@@ -148,26 +165,26 @@ export async function GET(request: NextRequest) {
       ...apt,
       patient: apt.Patient || apt.patient,
       provider: apt.User || apt.provider,
-      services: servicesWithModifiers.filter((s: any) => s.appointmentId === apt.id)
-    }))
+      services: servicesWithModifiers.filter((s: any) => s.appointmentId === apt.id),
+    }));
 
     return NextResponse.json({
       appointments: normalizedAppointments,
-    })
+    });
   } catch (error) {
-    console.error('[API /api/appointments] Error:', error)
+    console.error('[API /api/appointments] Error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch appointments' },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }
 
 // POST /api/appointments - Create new appointment
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    console.log('[API /api/appointments] POST body:', body)
+    const body = await request.json();
+    console.log('[API /api/appointments] POST body:', body);
 
     const {
       patientId,
@@ -179,41 +196,34 @@ export async function POST(request: NextRequest) {
       type,
       reason,
       notes,
-    } = body
+      // SOAP Notes
+      soapSubjective,
+      soapObjective,
+      soapAssessment,
+      soapPlan,
+    } = body;
 
     // Validation
     if (!patientId) {
-      return NextResponse.json(
-        { error: 'Patient ID is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Patient ID is required' }, { status: 400 });
     }
 
     if (!start || !end) {
-      return NextResponse.json(
-        { error: 'Start and end times are required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Start and end times are required' }, { status: 400 });
     }
 
     if (!services || !Array.isArray(services) || services.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one service is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'At least one service is required' }, { status: 400 });
     }
 
     // No need to parse dates - they're already in the correct format from the form
     // Format: "YYYY-MM-DDTHH:MM:SS" (no timezone)
     if (start >= end) {
-      return NextResponse.json(
-        { error: 'Start time must be before end time' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Start time must be before end time' }, { status: 400 });
     }
 
     // For WRITE operations, use Supabase only
-    const { createClient } = await import('@supabase/supabase-js')
+    const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE!,
@@ -222,8 +232,8 @@ export async function POST(request: NextRequest) {
           persistSession: false,
           autoRefreshToken: false,
         },
-      }
-    )
+      },
+    );
 
     // Check for overlapping appointments (same patient, overlapping time)
     const { data: existing } = await supabase
@@ -231,16 +241,16 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('patientId', patientId)
       .neq('status', 'cancelled')
-      .or(`and(startsAt.lte.${end},endsAt.gte.${start})`)
+      .or(`and(startsAt.lte.${end},endsAt.gte.${start})`);
 
     if (existing && existing.length > 0) {
       return NextResponse.json(
         { error: 'Patient already has an appointment during this time' },
-        { status: 409 }
-      )
+        { status: 409 },
+      );
     }
 
-    const appointmentId = randomUUID()
+    const appointmentId = randomUUID();
     const appointmentData: any = {
       id: appointmentId,
       patientId,
@@ -251,29 +261,34 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
       status: 'scheduled',
       totalPrice: totalPrice || 0,
+      // SOAP Notes
+      soapSubjective: soapSubjective || null,
+      soapObjective: soapObjective || null,
+      soapAssessment: soapAssessment || null,
+      soapPlan: soapPlan || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    }
+    };
 
     // Only add type if it's provided and valid
     if (type) {
-      appointmentData.type = type
+      appointmentData.type = type;
     }
 
     const { data: appointment, error: insertError } = await supabase
       .from('Appointment')
       .insert(appointmentData)
       .select('*, patient:Patient(*)')
-      .single()
+      .single();
 
     if (insertError) {
-      console.error('[API /api/appointments] Supabase insert error:', insertError)
-      throw new Error(`Failed to create appointment: ${insertError.message}`)
+      console.error('[API /api/appointments] Supabase insert error:', insertError);
+      throw new Error(`Failed to create appointment: ${insertError.message}`);
     }
 
     // Insert services and their modifiers
     for (const service of services) {
-      const serviceId = randomUUID()
+      const serviceId = randomUUID();
       const serviceData = {
         id: serviceId,
         appointmentId,
@@ -283,15 +298,13 @@ export async function POST(request: NextRequest) {
         variantName: service.variantName || null,
         basePrice: service.basePrice || 0,
         createdAt: new Date().toISOString(),
-      }
+      };
 
-      const { error: serviceError } = await supabase
-        .from('AppointmentService')
-        .insert(serviceData)
+      const { error: serviceError } = await supabase.from('AppointmentService').insert(serviceData);
 
       if (serviceError) {
-        console.error('[API /api/appointments] AppointmentService insert error:', serviceError)
-        throw new Error(`Failed to create appointment service: ${serviceError.message}`)
+        console.error('[API /api/appointments] AppointmentService insert error:', serviceError);
+        throw new Error(`Failed to create appointment service: ${serviceError.message}`);
       }
 
       // Insert modifiers for this service
@@ -305,20 +318,25 @@ export async function POST(request: NextRequest) {
           optionName: mod.optionName || null,
           price: mod.price || 0,
           createdAt: new Date().toISOString(),
-        }))
+        }));
 
         const { error: modifierError } = await supabase
           .from('AppointmentServiceModifier')
-          .insert(modifierRecords)
+          .insert(modifierRecords);
 
         if (modifierError) {
-          console.error('[API /api/appointments] AppointmentServiceModifier insert error:', modifierError)
-          throw new Error(`Failed to create appointment service modifiers: ${modifierError.message}`)
+          console.error(
+            '[API /api/appointments] AppointmentServiceModifier insert error:',
+            modifierError,
+          );
+          throw new Error(
+            `Failed to create appointment service modifiers: ${modifierError.message}`,
+          );
         }
       }
     }
 
-    console.log('[API /api/appointments] Appointment created:', appointment.id)
+    console.log('[API /api/appointments] Appointment created:', appointment.id);
 
     return NextResponse.json(
       {
@@ -326,13 +344,13 @@ export async function POST(request: NextRequest) {
         appointment,
         source: 'supabase',
       },
-      { status: 201 }
-    )
+      { status: 201 },
+    );
   } catch (error) {
-    console.error('[API /api/appointments] Error:', error)
+    console.error('[API /api/appointments] Error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to create appointment' },
-      { status: 500 }
-    )
+      { status: 500 },
+    );
   }
 }

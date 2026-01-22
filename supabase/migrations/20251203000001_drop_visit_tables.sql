@@ -24,8 +24,8 @@ DROP TYPE IF EXISTS "PaymentMethod" CASCADE;
 -- Update AppointmentStatus enum to remove 'arrived' and 'confirmed'
 -- First, update any existing 'arrived' or 'confirmed' statuses to 'scheduled'
 UPDATE "Appointment" 
-SET status = 'scheduled'::text::"AppointmentStatus"
-WHERE status IN ('arrived'::text::"AppointmentStatus", 'confirmed'::text::"AppointmentStatus");
+SET status = 'scheduled'::"AppointmentStatus"
+WHERE status::text IN ('arrived', 'confirmed');
 
 -- Now recreate the enum with only the values we need
 ALTER TYPE "AppointmentStatus" RENAME TO "AppointmentStatus_old";
