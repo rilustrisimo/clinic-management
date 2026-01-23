@@ -65,6 +65,7 @@ interface Filters {
 
 export default function LabHistoryPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -479,7 +480,15 @@ export default function LabHistoryPage() {
 
       {/* Order Detail Slide-over */}
       {selectedOrderId && (
-        <LabOrderDetail orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
+        <LabOrderDetail
+          orderId={selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+          onEdit={() => {
+            setEditingOrderId(selectedOrderId);
+            setSelectedOrderId(null);
+            alert('Edit functionality requires order editing form to be implemented');
+          }}
+        />
       )}
     </div>
   );

@@ -23,6 +23,7 @@ export default function LabsPage() {
   const [showNewOrder, setShowNewOrder] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<SelectedPatient | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
 
   // Fetch today's orders
   const today = new Date().toISOString().split('T')[0];
@@ -52,6 +53,7 @@ export default function LabsPage() {
   const handleOrderCreated = () => {
     setShowNewOrder(false);
     setSelectedPatient(null);
+    setEditingOrderId(null);
   };
 
   const handlePatientSelect = (patient: SelectedPatient) => {
@@ -182,7 +184,15 @@ export default function LabsPage() {
 
       {/* Order Detail Slide-over */}
       {selectedOrderId && (
-        <LabOrderDetail orderId={selectedOrderId} onClose={() => setSelectedOrderId(null)} />
+        <LabOrderDetail
+          orderId={selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+          onEdit={() => {
+            setEditingOrderId(selectedOrderId);
+            setSelectedOrderId(null);
+            setShowNewOrder(true);
+          }}
+        />
       )}
     </div>
   );
