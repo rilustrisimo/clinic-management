@@ -5,10 +5,10 @@
 INSERT INTO "public"."Role" ("id", "name", "createdAt", "updatedAt")
 VALUES 
   ('role_admin', 'Admin', now(), now()),
-  ('role_doctor', 'Doctor', now(), now()),
-  ('role_nurse', 'Nurse', now(), now()),
-  ('role_receptionist', 'Receptionist', now(), now()),
+  ('role_provider', 'Provider', now(), now()),
+  ('role_frontdesk', 'Frontdesk', now(), now()),
   ('role_billing', 'Billing', now(), now()),
+  ('role_inventory', 'Inventory', now(), now()),
   ('role_labtech', 'LabTech', now(), now())
 ON CONFLICT ("name") DO NOTHING;
 
