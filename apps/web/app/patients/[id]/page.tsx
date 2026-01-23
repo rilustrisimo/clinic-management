@@ -209,8 +209,18 @@ export default function PatientDetailPage() {
 
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['appointments', patientId] });
+    onSuccess: async (updatedAppointment) => {
+      await queryClient.invalidateQueries({ queryKey: ['appointments', patientId] });
+      // Update the selected appointment with the new SOAP data
+      if (selectedAppointment) {
+        setSelectedAppointment({
+          ...selectedAppointment,
+          soapSubjective: updatedAppointment.soapSubjective,
+          soapObjective: updatedAppointment.soapObjective,
+          soapAssessment: updatedAppointment.soapAssessment,
+          soapPlan: updatedAppointment.soapPlan,
+        });
+      }
       setIsEditingSOAP(false);
     },
   });
