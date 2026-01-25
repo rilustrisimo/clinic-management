@@ -139,11 +139,109 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Cannot update a released order' }, { status: 400 });
     }
 
+    // If items are provided, update the order items
+    if (updates.items && updates.items.length > 0) {
+      // Delete existing items
+      const { error: deleteError } = await supabase.from('LabOrderItem').delete().eq('orderId', id);
+
+      if (deleteError) {
+        console.error('[API /api/labs/orders/[id]] Error deleting old items:', deleteError);
+        throw deleteError;
+      }
+
+      // Map section names to standard lab section enum codes
+      function mapSectionToEnum(sectionName: string): string {
+        const lower = sectionName.toLowerCase();
+        if (lower.includes('hematology')) return 'hematology';
+        if (lower.includes('chemistry') || lower.includes('chemical')) return 'chemistry';
+        if (
+          lower.includes('urinalysis') ||
+          lower.includes('urine') ||
+          lower.includes('clinical microscopy')
+        )
+          return 'urinalysis';
+        if (lower.includes('serology')) return 'serology';
+        if (lower.includes('fecal') || lower.includes('stool')) return 'fecalysis';
+        if (lower.includes('microbiology')) return 'microbiology';
+        if (lower.includes('drug')) return 'drug_testing';
+        return 'other';
+      }
+
+      // Insert new items
+      const itemsToInsert = updates.items.map((item: any) => ({
+        id: crypto.randomUUID(),
+        orderId: id,
+        testId: null,
+        panelId: null,
+        testCode: item.code,
+        testName: item.name,
+        section: mapSectionToEnum(item.section),
+        status: 'pending',
+        priceSnapshot: item.price,
+        unitPrice: item.price,
+        loyverseOptionId: item.loyverseOptionId,
+        loyverseModifierId: item.loyverseModifierId,
+        specimenType: item.specimenType || 'blood',
+        createdAt: new Date().toISOString(),
+      }));
+
+      const { error: insertError } = await supabase.from('LabOrderItem').insert(itemsToInsert);
+
+      if (insertError) {
+        console.error('[API /api/labs/orders/[id]] Error inserting new items:', insertError);
+        throw insertError;
+      }
+
+      // Calculate subtotal from items
+      const subtotal = updates.items.reduce((sum: number, item: any) => sum + item.price, 0);
+      updates.subtotal = subtotal;
+
+      // Calculate discount if provided
+      let discountAmount = 0;
+      const discount = (updates as any).discount;
+      if (discount && subtotal > 0) {
+        if (discount.discountType === 'FIXED_PERCENT' || discount.discountType === 'PERCENT') {
+          const clampedPercent = Math.min(100, Math.max(0, discount.discountValue || 0));
+          discountAmount = subtotal * (clampedPercent / 100);
+        } else if (discount.discountType === 'FIXED_AMOUNT') {
+          discountAmount = Math.min(discount.discountValue || 0, subtotal);
+        }
+
+        console.log('[API /api/labs/orders/[id]] Discount applied:', {
+          name: discount.discountName,
+          type: discount.discountType,
+          value: discount.discountValue,
+          amount: discountAmount,
+        });
+
+        // Store discount info
+        (updates as any).discountId = discount.discountId;
+        (updates as any).discountName = discount.discountName;
+        (updates as any).discountType =
+          discount.discountType === 'FIXED_PERCENT' ? 'PERCENT' : discount.discountType;
+        (updates as any).discountValue = discount.discountValue;
+        (updates as any).discountAmount = discountAmount;
+      } else {
+        // Clear discount if not provided
+        (updates as any).discountId = null;
+        (updates as any).discountName = null;
+        (updates as any).discountType = null;
+        (updates as any).discountValue = null;
+        (updates as any).discountAmount = null;
+      }
+
+      // Calculate final total
+      updates.totalAmount = subtotal - discountAmount;
+    }
+
+    // Remove items and discount object from updates before updating order (they're already processed)
+    const { items: _items, discount: _discount, ...orderUpdates } = updates as any;
+
     // Update the order
     const { data: order, error: updateError } = await supabase
       .from('LabOrder')
       .update({
-        ...updates,
+        ...orderUpdates,
         updatedAt: new Date().toISOString(),
       })
       .eq('id', id)

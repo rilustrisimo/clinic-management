@@ -14,25 +14,24 @@ export class LoyverseClient {
 
   private ensureToken() {
     if (!this.token) {
-      throw new Error('Loyverse API token is required. Please set LOYVERSE_API_TOKEN environment variable.');
+      throw new Error(
+        'Loyverse API token is required. Please set LOYVERSE_API_TOKEN environment variable.',
+      );
     }
     console.log('[LoyverseClient] Token available:', this.token ? 'Yes' : 'No');
   }
 
-  private async request(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<any> {
+  private async request(endpoint: string, options: RequestInit = {}): Promise<any> {
     this.ensureToken();
-    
+
     console.log('[LoyverseClient] Making request to:', endpoint);
-    
+
     const url = `${LOYVERSE_API_BASE}${endpoint}`;
-    
+
     const response = await fetch(url, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${this.token}`,
+        Authorization: `Bearer ${this.token}`,
         'Content-Type': 'application/json',
         ...options.headers,
       },
@@ -49,14 +48,11 @@ export class LoyverseClient {
   /**
    * Get all customers
    */
-  async getCustomers(params?: {
-    cursor?: string;
-    limit?: number;
-  }): Promise<any> {
+  async getCustomers(params?: { cursor?: string; limit?: number }): Promise<any> {
     const query = new URLSearchParams();
     if (params?.cursor) query.set('cursor', params.cursor);
     if (params?.limit) query.set('limit', params.limit.toString());
-    
+
     return this.request(`/customers?${query.toString()}`);
   }
 
@@ -86,6 +82,27 @@ export class LoyverseClient {
       method: 'DELETE',
     });
   }
+
+  /**
+   * Get all discounts
+   */
+  async getDiscounts(params?: {
+    cursor?: string;
+    limit?: number;
+  }): Promise<{ discounts: LoyverseDiscount[]; cursor?: string }> {
+    const query = new URLSearchParams();
+    if (params?.cursor) query.set('cursor', params.cursor);
+    if (params?.limit) query.set('limit', params.limit.toString());
+
+    return this.request(`/discounts?${query.toString()}`);
+  }
+
+  /**
+   * Get a single discount by ID
+   */
+  async getDiscount(discountId: string): Promise<LoyverseDiscount> {
+    return this.request(`/discounts/${discountId}`);
+  }
 }
 
 /**
@@ -108,6 +125,22 @@ export interface LoyverseCustomer {
   total_visits?: number;
   total_spent?: number;
   total_points?: number;
+}
+
+/**
+ * Loyverse Discount type (matches API schema)
+ */
+export interface LoyverseDiscount {
+  id: string;
+  name: string;
+  type: 'FIXED_PERCENT' | 'FIXED_AMOUNT';
+  discount_amount: number; // Used for FIXED_AMOUNT type
+  discount_percent: number; // Used for FIXED_PERCENT type
+  stores?: string[];
+  restricted_access?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  deleted_at?: string;
 }
 
 // Lazy singleton instance

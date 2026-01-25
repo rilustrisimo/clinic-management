@@ -201,6 +201,8 @@ export async function POST(request: NextRequest) {
       soapObjective,
       soapAssessment,
       soapPlan,
+      // Discount
+      discount, // { discountId, discountName, discountType, discountValue }
     } = body;
 
     // Validation
@@ -251,6 +253,27 @@ export async function POST(request: NextRequest) {
     }
 
     const appointmentId = randomUUID();
+
+    // Calculate discount if provided
+    const subtotal = totalPrice || 0;
+    let discountAmount = 0;
+    if (discount && subtotal > 0) {
+      // Handle both 'PERCENT' (from DB) and 'FIXED_PERCENT' (from Loyverse)
+      if (discount.discountType === 'FIXED_PERCENT' || discount.discountType === 'PERCENT') {
+        const clampedPercent = Math.min(100, Math.max(0, discount.discountValue || 0));
+        discountAmount = subtotal * (clampedPercent / 100);
+      } else if (discount.discountType === 'FIXED_AMOUNT') {
+        discountAmount = Math.min(discount.discountValue || 0, subtotal);
+      }
+      console.log('[API /api/appointments] Discount applied:', {
+        name: discount.discountName,
+        type: discount.discountType,
+        value: discount.discountValue,
+        amount: discountAmount,
+      });
+    }
+    const finalTotal = subtotal - discountAmount;
+
     const appointmentData: any = {
       id: appointmentId,
       patientId,
@@ -260,7 +283,13 @@ export async function POST(request: NextRequest) {
       reason: reason || null,
       notes: notes || null,
       status: 'scheduled',
-      totalPrice: totalPrice || 0,
+      subtotal: subtotal,
+      totalPrice: finalTotal,
+      discountId: discount?.discountId || null,
+      discountName: discount?.discountName || null,
+      discountType: discount?.discountType || null,
+      discountValue: discount?.discountValue || null,
+      discountAmount: discountAmount || null,
       // SOAP Notes
       soapSubjective: soapSubjective || null,
       soapObjective: soapObjective || null,

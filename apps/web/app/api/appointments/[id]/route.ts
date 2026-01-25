@@ -45,6 +45,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       providerId,
       services,
       totalPrice,
+      // Discount
+      discount, // { discountId, discountName, discountType, discountValue }
       // SOAP fields
       soapSubjective,
       soapObjective,
@@ -96,7 +98,40 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (notes !== undefined) updateData.notes = notes;
     if (status) updateData.status = status;
     if (providerId !== undefined) updateData.providerId = providerId;
-    if (totalPrice !== undefined) updateData.totalPrice = totalPrice;
+
+    // Calculate and save discount if provided
+    if (totalPrice !== undefined) {
+      const subtotal = totalPrice; // totalPrice from form is the sum before discount
+      let discountAmount = 0;
+
+      if (discount && subtotal > 0) {
+        // Handle both 'PERCENT' (from DB) and 'FIXED_PERCENT' (from Loyverse)
+        if (discount.discountType === 'FIXED_PERCENT' || discount.discountType === 'PERCENT') {
+          const clampedPercent = Math.min(100, Math.max(0, discount.discountValue || 0));
+          discountAmount = subtotal * (clampedPercent / 100);
+        } else if (discount.discountType === 'FIXED_AMOUNT') {
+          discountAmount = Math.min(discount.discountValue || 0, subtotal);
+        }
+
+        console.log('[API /api/appointments/[id]] Discount applied:', {
+          name: discount.discountName,
+          type: discount.discountType,
+          value: discount.discountValue,
+          amount: discountAmount,
+        });
+      }
+
+      const finalTotal = subtotal - discountAmount;
+
+      updateData.subtotal = subtotal;
+      updateData.totalPrice = finalTotal;
+      updateData.discountId = discount?.discountId || null;
+      updateData.discountName = discount?.discountName || null;
+      updateData.discountType = discount?.discountType || null;
+      updateData.discountValue = discount?.discountValue || null;
+      updateData.discountAmount = discountAmount || null;
+    }
+
     // SOAP fields
     if (soapSubjective !== undefined) updateData.soapSubjective = soapSubjective;
     if (soapObjective !== undefined) updateData.soapObjective = soapObjective;

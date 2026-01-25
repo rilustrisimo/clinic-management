@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { LabOrderCard } from '@/components/labs/order/LabOrderCard';
 import { LabOrderDetail } from '@/components/labs/order/LabOrderDetail';
+import { LabOrderForm } from '@/components/labs/order/LabOrderForm';
 import { cn } from '@/lib/utils';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -63,9 +64,15 @@ interface Filters {
   dateTo: Date | null;
 }
 
+interface EditingOrder {
+  orderId: string;
+  patientId: string;
+  patientName: string;
+}
+
 export default function LabHistoryPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<EditingOrder | null>(null);
   const [page, setPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<Filters>({
@@ -484,11 +491,36 @@ export default function LabHistoryPage() {
           orderId={selectedOrderId}
           onClose={() => setSelectedOrderId(null)}
           onEdit={() => {
-            setEditingOrderId(selectedOrderId);
-            setSelectedOrderId(null);
-            alert('Edit functionality requires order editing form to be implemented');
+            // Find the order to get patient info
+            const order = orders.find((o: any) => o.id === selectedOrderId);
+            if (order && order.patient) {
+              setEditingOrder({
+                orderId: selectedOrderId,
+                patientId: order.patientId,
+                patientName: `${order.patient.firstName} ${order.patient.lastName}`,
+              });
+              setSelectedOrderId(null);
+            }
           }}
         />
+      )}
+
+      {/* Edit Order Dialog */}
+      {editingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-neutral-900">
+            <LabOrderForm
+              patientId={editingOrder.patientId}
+              patientName={editingOrder.patientName}
+              orderId={editingOrder.orderId}
+              onSuccess={() => {
+                setEditingOrder(null);
+                refetch();
+              }}
+              onCancel={() => setEditingOrder(null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

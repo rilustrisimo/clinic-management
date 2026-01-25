@@ -84,13 +84,36 @@ export const createLabOrderSchema = z.object({
       z.object({
         testId: z.string().optional().nullable(),
         panelId: z.string().optional().nullable(),
+        // Loyverse-based items (for direct catalog selection)
+        loyverseOptionId: z.string().optional(),
+        loyverseModifierId: z.string().optional(),
+        code: z.string().optional(),
+        name: z.string().optional(),
+        section: z.string().optional(),
+        price: z.number().optional(),
+        specimenType: z.string().optional(),
       }),
     )
     .min(1, 'At least one test or panel is required')
     .refine(
-      (items) => items.every((item) => item.testId || item.panelId),
-      'Each item must have either a testId or panelId',
+      (items) => items.every((item) => item.testId || item.panelId || item.loyverseOptionId),
+      'Each item must have either a testId, panelId, or loyverseOptionId',
     ),
+  discount: z
+    .object({
+      discountId: z.string(),
+      discountName: z.string(),
+      discountType: z.enum([
+        'FIXED_PERCENT',
+        'FIXED_AMOUNT',
+        'VARIABLE_PERCENT',
+        'VARIABLE_AMOUNT',
+        'DISCOUNT_BY_POINTS',
+      ]),
+      discountValue: z.number(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export type CreateLabOrderData = z.infer<typeof createLabOrderSchema>;
@@ -101,6 +124,30 @@ export type CreateLabOrderData = z.infer<typeof createLabOrderSchema>;
 export const updateLabOrderSchema = z.object({
   priority: LabPriorityEnum.optional(),
   notes: z.string().max(1000).optional().nullable(),
+  totalAmount: z.number().nonnegative().optional(),
+  subtotal: z.number().nonnegative().optional(),
+  items: z
+    .array(
+      z.object({
+        loyverseOptionId: z.string(),
+        loyverseModifierId: z.string(),
+        code: z.string().min(1, 'Test code is required'),
+        name: z.string().min(1, 'Test name is required'),
+        section: z.string().min(1, 'Section is required'),
+        price: z.number().nonnegative('Price must be non-negative'),
+        specimenType: z.string().optional(),
+      }),
+    )
+    .optional(),
+  discount: z
+    .object({
+      discountId: z.string(),
+      discountName: z.string(),
+      discountType: z.enum(['FIXED_PERCENT', 'FIXED_AMOUNT', 'PERCENT']),
+      discountValue: z.number(),
+    })
+    .optional()
+    .nullable(),
 });
 
 export type UpdateLabOrderData = z.infer<typeof updateLabOrderSchema>;

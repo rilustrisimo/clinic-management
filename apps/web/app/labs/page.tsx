@@ -24,6 +24,7 @@ export default function LabsPage() {
   const [selectedPatient, setSelectedPatient] = useState<SelectedPatient | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [editingOrderData, setEditingOrderData] = useState<any>(null);
 
   // Fetch today's orders
   const today = new Date().toISOString().split('T')[0];
@@ -54,6 +55,7 @@ export default function LabsPage() {
     setShowNewOrder(false);
     setSelectedPatient(null);
     setEditingOrderId(null);
+    setEditingOrderData(null);
   };
 
   const handlePatientSelect = (patient: SelectedPatient) => {
@@ -146,7 +148,7 @@ export default function LabsPage() {
         {activeTab === 'stats' && <StatsTab stats={statsData} />}
       </div>
 
-      {/* New Order Slide-over */}
+      {/* New/Edit Order Slide-over */}
       {showNewOrder && (
         <div className="fixed inset-0 z-50 flex">
           {/* Backdrop */}
@@ -155,26 +157,37 @@ export default function LabsPage() {
             onClick={() => {
               setShowNewOrder(false);
               setSelectedPatient(null);
+              setEditingOrderId(null);
+              setEditingOrderData(null);
             }}
           />
 
           {/* Panel */}
           <div className="relative ml-auto flex h-full w-full max-w-4xl flex-col bg-white shadow-xl dark:bg-neutral-900">
-            {!selectedPatient ? (
-              // Patient Selection
+            {!selectedPatient && !editingOrderId ? (
+              // Patient Selection (for new orders only)
               <PatientSelector
                 onSelect={handlePatientSelect}
                 onClose={() => setShowNewOrder(false)}
               />
             ) : (
-              // Lab Order Form
+              // Lab Order Form (for both new and edit)
               <LabOrderForm
-                patientId={selectedPatient.id}
-                patientName={`${selectedPatient.lastName}, ${selectedPatient.firstName}${selectedPatient.middleName ? ` ${selectedPatient.middleName.charAt(0)}.` : ''}`}
+                patientId={editingOrderData?.patientId || selectedPatient?.id}
+                patientName={
+                  editingOrderData
+                    ? `${editingOrderData.patient?.lastName || ''}, ${editingOrderData.patient?.firstName || ''}${editingOrderData.patient?.middleName ? ` ${editingOrderData.patient.middleName.charAt(0)}.` : ''}`
+                    : selectedPatient
+                      ? `${selectedPatient.lastName}, ${selectedPatient.firstName}${selectedPatient.middleName ? ` ${selectedPatient.middleName.charAt(0)}.` : ''}`
+                      : undefined
+                }
+                orderId={editingOrderId || undefined}
                 onSuccess={handleOrderCreated}
                 onCancel={() => {
                   setShowNewOrder(false);
                   setSelectedPatient(null);
+                  setEditingOrderId(null);
+                  setEditingOrderData(null);
                 }}
               />
             )}
@@ -187,10 +200,20 @@ export default function LabsPage() {
         <LabOrderDetail
           orderId={selectedOrderId}
           onClose={() => setSelectedOrderId(null)}
-          onEdit={() => {
-            setEditingOrderId(selectedOrderId);
-            setSelectedOrderId(null);
-            setShowNewOrder(true);
+          onEdit={async () => {
+            // Fetch order data before opening edit form
+            try {
+              const res = await fetch(`/api/labs/orders/${selectedOrderId}`);
+              if (res.ok) {
+                const data = await res.json();
+                setEditingOrderData(data.data);
+                setEditingOrderId(selectedOrderId);
+                setSelectedOrderId(null);
+                setShowNewOrder(true);
+              }
+            } catch (error) {
+              console.error('Failed to fetch order data:', error);
+            }
           }}
         />
       )}

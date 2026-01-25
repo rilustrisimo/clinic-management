@@ -3,6 +3,14 @@ import { createClient } from '@supabase/supabase-js';
 import { getSupabaseClient } from '@/lib/db/client';
 import { z } from 'zod';
 
+// Discount schema for lab orders
+const discountSchema = z.object({
+  discountId: z.string().min(1, 'Discount ID is required'),
+  discountName: z.string().min(1, 'Discount name is required'),
+  discountType: z.enum(['FIXED_PERCENT', 'FIXED_AMOUNT']),
+  discountValue: z.number().nonnegative('Discount value must be non-negative'),
+});
+
 // Updated schema to support Loyverse-based tests
 const createLabOrderSchema = z.object({
   patientId: z.string().min(1, 'Patient is required'),
@@ -25,7 +33,31 @@ const createLabOrderSchema = z.object({
       }),
     )
     .min(1, 'At least one test is required'),
+  discount: discountSchema.optional().nullable(),
 });
+
+// Calculate discount amount based on type and value
+function calculateDiscountAmount(
+  subtotal: number,
+  discountType: 'FIXED_PERCENT' | 'FIXED_AMOUNT' | 'PERCENT',
+  discountValue: number,
+): number {
+  if (subtotal <= 0 || discountValue <= 0) {
+    return 0;
+  }
+
+  let amount: number;
+  // Handle both 'PERCENT' (from DB) and 'FIXED_PERCENT' (from Loyverse)
+  if (discountType === 'FIXED_PERCENT' || discountType === 'PERCENT') {
+    const clampedPercent = Math.min(100, Math.max(0, discountValue));
+    amount = subtotal * (clampedPercent / 100);
+  } else {
+    amount = discountValue;
+  }
+
+  // Discount cannot exceed subtotal
+  return Math.min(amount, subtotal);
+}
 
 // Map section names to standard lab section enum codes
 function mapSectionToEnum(sectionName: string): string {
@@ -171,8 +203,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { patientId, visitId, appointmentId, orderingProviderId, priority, notes, items } =
-      parseResult.data;
+    const {
+      patientId,
+      visitId,
+      appointmentId,
+      orderingProviderId,
+      priority,
+      notes,
+      items,
+      discount,
+    } = parseResult.data;
 
     // Use service role for writes
     const supabase = createClient(
@@ -194,8 +234,34 @@ export async function POST(request: NextRequest) {
     const orderNumber = orderNumberData;
     console.log('[API /api/labs/orders] Generated order number:', orderNumber);
 
-    // Calculate total amount from Loyverse items
-    const totalAmount = items.reduce((sum, item) => sum + item.price, 0);
+    // Calculate subtotal from Loyverse items
+    const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+
+    // Calculate discount amount if discount is provided
+    let discountAmount = 0;
+    if (discount) {
+      discountAmount = calculateDiscountAmount(
+        subtotal,
+        discount.discountType,
+        discount.discountValue,
+      );
+      console.log('[API /api/labs/orders] Discount applied:', {
+        name: discount.discountName,
+        type: discount.discountType,
+        value: discount.discountValue,
+        amount: discountAmount,
+      });
+    }
+
+    // Calculate total amount after discount
+    const totalAmount = subtotal - discountAmount;
+
+    // Convert Loyverse discount type to database format
+    const dbDiscountType = discount?.discountType
+      ? discount.discountType === 'FIXED_PERCENT'
+        ? 'PERCENT'
+        : 'FIXED_AMOUNT'
+      : null;
 
     // Create order items from Loyverse data
     const orderItems = items.map((item) => ({
@@ -227,7 +293,13 @@ export async function POST(request: NextRequest) {
         priority: priority || 'routine',
         status: 'pending_payment',
         paymentStatus: 'unpaid',
+        subtotal,
         totalAmount,
+        discountId: discount?.discountId || null,
+        discountName: discount?.discountName || null,
+        discountType: dbDiscountType,
+        discountValue: discount?.discountValue || null,
+        discountAmount: discountAmount || null,
         notes: notes || null,
         placedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),

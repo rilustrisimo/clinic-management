@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { DiscountSelector } from '@/components/shared/DiscountSelector';
+import { PriceBreakdown } from '@/components/shared/PriceBreakdown';
+import type { LoyverseDiscount } from '@/lib/types/discount';
+import { calculateDiscountFromLoyverse, getDiscountValue } from '@/lib/utils/discount';
 
 interface Patient {
   id: string;
@@ -76,6 +80,11 @@ interface AppointmentFormProps {
     soapObjective?: string;
     soapAssessment?: string;
     soapPlan?: string;
+    // Discount info (for editing)
+    discountId?: string;
+    discountName?: string;
+    discountType?: 'FIXED_PERCENT' | 'FIXED_AMOUNT' | 'PERCENT'; // Support both Loyverse and DB types
+    discountValue?: number;
   };
 }
 
@@ -162,6 +171,7 @@ export function AppointmentForm({
   const [currentVariantId, setCurrentVariantId] = useState('');
   const [currentModifiers, setCurrentModifiers] = useState<Record<string, string>>({});
   const [selectedItem, setSelectedItem] = useState<LoyverseItem | null>(null);
+  const [selectedDiscount, setSelectedDiscount] = useState<LoyverseDiscount | null>(null);
 
   const getCurrentTime = () => {
     const now = new Date();
@@ -208,18 +218,68 @@ export function AppointmentForm({
     }
   }, [startTime, setValue]);
 
-  // Search patients query
-  const { data: searchResults } = useQuery({
-    queryKey: ['patient-search', patientSearch],
-    queryFn: () => searchPatients(patientSearch),
-    enabled: patientSearch.length >= 2,
-  });
-
   // Fetch providers query
   const { data: providers = [] } = useQuery({
     queryKey: ['providers'],
     queryFn: fetchProviders,
   });
+
+  // Patient search query
+  const { data: searchResults } = useQuery({
+    queryKey: ['patients', 'search', patientSearch],
+    queryFn: () => searchPatients(patientSearch),
+    enabled: patientSearch.length >= 2 && !preSelectedPatient,
+  });
+
+  // Initialize provider value when providers load (for edit mode)
+  useEffect(() => {
+    if (editMode && initialData?.providerId && providers.length > 0) {
+      console.log('[AppointmentForm] Setting provider:', {
+        providerId: initialData.providerId,
+        providersCount: providers.length,
+        providerIds: providers.map((p) => p.id),
+      });
+      setValue('providerId', initialData.providerId);
+    }
+  }, [editMode, initialData?.providerId, providers.length, setValue]);
+
+  // Initialize discount from initialData (for edit mode)
+  useEffect(() => {
+    if (
+      editMode &&
+      initialData?.discountId &&
+      initialData?.discountName &&
+      initialData?.discountType &&
+      typeof initialData?.discountValue === 'number'
+    ) {
+      // Database stores 'PERCENT' but Loyverse type is 'FIXED_PERCENT'
+      const loyverseType =
+        initialData.discountType === 'PERCENT' || initialData.discountType === 'FIXED_PERCENT'
+          ? 'FIXED_PERCENT'
+          : 'FIXED_AMOUNT';
+
+      console.log('[AppointmentForm] Initializing discount from DB:', {
+        discountId: initialData.discountId,
+        discountType: initialData.discountType,
+        discountValue: initialData.discountValue,
+        loyverseType,
+      });
+
+      setSelectedDiscount({
+        id: initialData.discountId,
+        name: initialData.discountName,
+        type: loyverseType,
+        discount_percent: loyverseType === 'FIXED_PERCENT' ? initialData.discountValue : 0,
+        discount_amount: loyverseType === 'FIXED_AMOUNT' ? initialData.discountValue : 0,
+      });
+    }
+  }, [
+    editMode,
+    initialData?.discountId,
+    initialData?.discountName,
+    initialData?.discountType,
+    initialData?.discountValue,
+  ]);
 
   // Fetch Loyverse items query
   const { data: itemsData, isLoading: itemsLoading } = useQuery({
@@ -342,6 +402,16 @@ export function AppointmentForm({
       };
     });
 
+    // Prepare discount data
+    const discountData = selectedDiscount
+      ? {
+          discountId: selectedDiscount.id,
+          discountName: selectedDiscount.name,
+          discountType: selectedDiscount.type === 'FIXED_PERCENT' ? 'PERCENT' : 'FIXED_AMOUNT',
+          discountValue: getDiscountValue(selectedDiscount),
+        }
+      : null;
+
     if (editMode) {
       createMutation.mutate({
         providerId: data.providerId || null,
@@ -349,6 +419,7 @@ export function AppointmentForm({
         end,
         services: servicesData,
         totalPrice,
+        discount: discountData,
         reason: data.reason || null,
         notes: data.notes || null,
         // SOAP Notes
@@ -365,6 +436,7 @@ export function AppointmentForm({
         end,
         services: servicesData,
         totalPrice,
+        discount: discountData,
         reason: data.reason || null,
         notes: data.notes || null,
         // SOAP Notes
@@ -566,30 +638,61 @@ export function AppointmentForm({
               </div>
             ))}
           </div>
-          <div className="mt-2 flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-2 dark:border-green-900 dark:bg-green-950">
-            <div className="text-[11px] font-medium text-green-900 dark:text-green-100">
-              Total for All Services
-            </div>
-            <div className="text-sm font-semibold text-green-900 dark:text-green-100">
-              ₱
-              {services
-                .reduce((total, service) => {
-                  const modifiersPrice = Object.values(service.modifiers).reduce(
-                    (sum, optionId) => {
-                      const item = items.find((i) => i.id === service.itemId);
-                      const modifier = item?.modifiers_info?.find((m) =>
-                        m.options.some((o) => o.id === optionId),
-                      );
-                      const option = modifier?.options.find((o) => o.id === optionId);
-                      return sum + (option?.price || 0);
-                    },
-                    0,
+          {/* Discount Selector */}
+          <div className="mt-3">
+            <DiscountSelector
+              subtotal={services.reduce((total, service) => {
+                const modifiersPrice = Object.values(service.modifiers).reduce((sum, optionId) => {
+                  const item = items.find((i) => i.id === service.itemId);
+                  const modifier = item?.modifiers_info?.find((m) =>
+                    m.options.some((o) => o.id === optionId),
                   );
-                  return total + service.basePrice + modifiersPrice;
-                }, 0)
-                .toFixed(2)}
-            </div>
+                  const option = modifier?.options.find((o) => o.id === optionId);
+                  return sum + (option?.price || 0);
+                }, 0);
+                return total + service.basePrice + modifiersPrice;
+              }, 0)}
+              selectedDiscount={selectedDiscount}
+              onSelectDiscount={setSelectedDiscount}
+            />
           </div>
+
+          {/* Price Breakdown */}
+          {(() => {
+            const subtotal = services.reduce((total, service) => {
+              const modifiersPrice = Object.values(service.modifiers).reduce((sum, optionId) => {
+                const item = items.find((i) => i.id === service.itemId);
+                const modifier = item?.modifiers_info?.find((m) =>
+                  m.options.some((o) => o.id === optionId),
+                );
+                const option = modifier?.options.find((o) => o.id === optionId);
+                return sum + (option?.price || 0);
+              }, 0);
+              return total + service.basePrice + modifiersPrice;
+            }, 0);
+            const discountAmount = selectedDiscount
+              ? calculateDiscountFromLoyverse(subtotal, selectedDiscount)
+              : 0;
+            return (
+              <div className="mt-3">
+                <PriceBreakdown
+                  subtotal={subtotal}
+                  discount={
+                    selectedDiscount
+                      ? {
+                          name: selectedDiscount.name,
+                          type: selectedDiscount.type,
+                          value: getDiscountValue(selectedDiscount),
+                          amount: discountAmount,
+                        }
+                      : undefined
+                  }
+                  totalAmount={subtotal - discountAmount}
+                  compact
+                />
+              </div>
+            );
+          })()}
         </div>
       )}
 

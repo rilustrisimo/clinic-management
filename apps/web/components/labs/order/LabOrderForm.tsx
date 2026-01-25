@@ -1,16 +1,21 @@
 'use client';
 
-import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { QuickPicks } from '../catalog/QuickPicks';
 import { TestCatalog } from '../catalog/TestCatalog';
+import { DiscountSelector } from '@/components/shared/DiscountSelector';
+import { PriceBreakdown } from '@/components/shared/PriceBreakdown';
+import type { LoyverseDiscount } from '@/lib/types/discount';
+import { calculateDiscountFromLoyverse, getDiscountValue } from '@/lib/utils/discount';
 
 interface LabOrderFormProps {
   patientId: string;
   patientName?: string;
   appointmentId?: string;
   visitId?: string;
+  orderId?: string; // For editing existing orders
   onSuccess?: (order: any) => void;
   onCancel?: () => void;
 }
@@ -32,16 +37,84 @@ export function LabOrderForm({
   patientName,
   appointmentId,
   visitId,
+  orderId,
   onSuccess,
   onCancel,
 }: LabOrderFormProps) {
+  const isEditing = !!orderId;
   const queryClient = useQueryClient();
   const [selectedTests, setSelectedTests] = useState<SelectedTest[]>([]);
   const [priority, setPriority] = useState<'routine' | 'urgent' | 'stat'>('routine');
   const [notes, setNotes] = useState('');
   const [showCatalog, setShowCatalog] = useState(false);
+  const [selectedDiscount, setSelectedDiscount] = useState<LoyverseDiscount | null>(null);
 
-  const createOrderMutation = useMutation({
+  // Fetch existing order data when editing
+  const { data: existingOrder } = useQuery({
+    queryKey: ['lab-order', orderId],
+    queryFn: async () => {
+      const res = await fetch(`/api/labs/orders/${orderId}`);
+      if (!res.ok) throw new Error('Failed to fetch order');
+      return res.json();
+    },
+    enabled: isEditing,
+  });
+
+  // Pre-populate form when editing
+  useEffect(() => {
+    if (existingOrder?.data) {
+      const order = existingOrder.data;
+      setPriority(order.priority || 'routine');
+      setNotes(order.notes || '');
+
+      // Map order items to selected tests format
+      if (order.items && order.items.length > 0) {
+        const tests: SelectedTest[] = order.items.map((item: any) => ({
+          id: item.loyverseOptionId,
+          code: item.testCode,
+          name: item.testName,
+          section: item.section,
+          sectionId: item.section,
+          price: parseFloat(item.priceSnapshot || item.unitPrice || 0),
+          specimenType: item.specimenType || 'blood',
+          loyverseModifierId: item.loyverseModifierId,
+          loyverseOptionId: item.loyverseOptionId,
+        }));
+        setSelectedTests(tests);
+      }
+
+      // Load discount from existing order
+      if (
+        order.discountId &&
+        order.discountName &&
+        order.discountType &&
+        typeof order.discountValue === 'number'
+      ) {
+        // Database stores 'PERCENT' but Loyverse type is 'FIXED_PERCENT'
+        const loyverseType =
+          order.discountType === 'PERCENT' || order.discountType === 'FIXED_PERCENT'
+            ? 'FIXED_PERCENT'
+            : 'FIXED_AMOUNT';
+
+        console.log('[LabOrderForm] Initializing discount from DB:', {
+          discountId: order.discountId,
+          discountType: order.discountType,
+          discountValue: order.discountValue,
+          loyverseType,
+        });
+
+        setSelectedDiscount({
+          id: order.discountId,
+          name: order.discountName,
+          type: loyverseType,
+          discount_percent: loyverseType === 'FIXED_PERCENT' ? order.discountValue : 0,
+          discount_amount: loyverseType === 'FIXED_AMOUNT' ? order.discountValue : 0,
+        });
+      }
+    }
+  }, [existingOrder]);
+
+  const saveOrderMutation = useMutation({
     mutationFn: async () => {
       // Send Loyverse test info to the API
       const items = selectedTests.map((test) => ({
@@ -54,8 +127,11 @@ export function LabOrderForm({
         specimenType: test.specimenType,
       }));
 
-      const res = await fetch('/api/labs/orders', {
-        method: 'POST',
+      const url = isEditing ? `/api/labs/orders/${orderId}` : '/api/labs/orders';
+      const method = isEditing ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           patientId,
@@ -64,19 +140,31 @@ export function LabOrderForm({
           priority,
           notes: notes || null,
           items,
+          discount: selectedDiscount
+            ? {
+                discountId: selectedDiscount.id,
+                discountName: selectedDiscount.name,
+                discountType: selectedDiscount.type,
+                discountValue: getDiscountValue(selectedDiscount),
+              }
+            : null,
         }),
       });
 
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to create order');
+        throw new Error(error.error || `Failed to ${isEditing ? 'update' : 'create'} order`);
       }
 
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['lab-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['lab-orders-history'] });
       queryClient.invalidateQueries({ queryKey: ['lab-queue'] });
+      if (isEditing) {
+        queryClient.invalidateQueries({ queryKey: ['lab-order', orderId] });
+      }
       onSuccess?.(data.data);
     },
   });
@@ -107,7 +195,12 @@ export function LabOrderForm({
     setSelectedTests(selectedTests.filter((t) => t.id !== testId));
   };
 
-  const totalAmount = selectedTests.reduce((sum, test) => sum + test.price, 0);
+  // Calculate subtotal and discount
+  const subtotal = selectedTests.reduce((sum, test) => sum + test.price, 0);
+  const discountAmount = selectedDiscount
+    ? calculateDiscountFromLoyverse(subtotal, selectedDiscount)
+    : 0;
+  const totalAmount = subtotal - discountAmount;
 
   const formatPrice = (price: number) =>
     new Intl.NumberFormat('en-PH', {
@@ -121,7 +214,9 @@ export function LabOrderForm({
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="border-b border-neutral-200 bg-white px-6 py-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">New Lab Order</h2>
+        <h2 className="text-lg font-semibold text-neutral-900 dark:text-white">
+          {isEditing ? 'Edit Lab Order' : 'New Lab Order'}
+        </h2>
         {patientName && (
           <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
             Patient: {patientName}
@@ -173,7 +268,7 @@ export function LabOrderForm({
 
         {/* Right: Order Summary */}
         <div className="flex w-1/3 flex-col bg-neutral-50 dark:bg-neutral-950">
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-y-auto overflow-x-visible p-4">
             <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
               Order Summary
             </h3>
@@ -278,16 +373,35 @@ export function LabOrderForm({
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-            {/* Total */}
-            <div className="mb-4 flex items-center justify-between">
-              <span className="text-sm font-medium text-neutral-600 dark:text-neutral-400">
-                Total Amount
-              </span>
-              <span className="text-xl font-semibold text-neutral-900 dark:text-white">
-                {formatPrice(totalAmount)}
-              </span>
+          {/* Footer - Outside overflow container */}
+          <div className="shrink-0 border-t border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+            {/* Discount Selector */}
+            <div className="mb-4">
+              <DiscountSelector
+                subtotal={subtotal}
+                selectedDiscount={selectedDiscount}
+                onSelectDiscount={setSelectedDiscount}
+                disabled={selectedTests.length === 0}
+              />
+            </div>
+
+            {/* Price Breakdown */}
+            <div className="mb-4">
+              <PriceBreakdown
+                subtotal={subtotal}
+                discount={
+                  selectedDiscount
+                    ? {
+                        name: selectedDiscount.name,
+                        type: selectedDiscount.type,
+                        value: getDiscountValue(selectedDiscount),
+                        amount: discountAmount,
+                      }
+                    : undefined
+                }
+                totalAmount={totalAmount}
+                compact
+              />
             </div>
 
             {/* Actions */}
@@ -299,17 +413,23 @@ export function LabOrderForm({
                 Cancel
               </button>
               <button
-                onClick={() => createOrderMutation.mutate()}
-                disabled={selectedTests.length === 0 || createOrderMutation.isPending}
+                onClick={() => saveOrderMutation.mutate()}
+                disabled={selectedTests.length === 0 || saveOrderMutation.isPending}
                 className="flex-1 rounded-lg bg-neutral-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100"
               >
-                {createOrderMutation.isPending ? 'Creating...' : 'Create Order'}
+                {saveOrderMutation.isPending
+                  ? isEditing
+                    ? 'Updating...'
+                    : 'Creating...'
+                  : isEditing
+                    ? 'Update Order'
+                    : 'Create Order'}
               </button>
             </div>
 
-            {createOrderMutation.isError && (
+            {saveOrderMutation.isError && (
               <p className="mt-2 text-center text-sm text-red-500">
-                {(createOrderMutation.error as Error).message}
+                {(saveOrderMutation.error as Error).message}
               </p>
             )}
           </div>

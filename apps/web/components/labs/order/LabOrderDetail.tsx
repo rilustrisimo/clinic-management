@@ -114,6 +114,7 @@ export function LabOrderDetail({ orderId, onClose, onEdit }: LabOrderDetailProps
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['lab-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['lab-orders-history'] });
       queryClient.invalidateQueries({ queryKey: ['lab-stats'] });
       queryClient.invalidateQueries({ queryKey: ['lab-queue'] });
       setShowPaymentConfirm(false);
@@ -137,6 +138,7 @@ export function LabOrderDetail({ orderId, onClose, onEdit }: LabOrderDetailProps
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['lab-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['lab-orders-history'] });
       queryClient.invalidateQueries({ queryKey: ['lab-stats'] });
       queryClient.invalidateQueries({ queryKey: ['lab-queue'] });
     },
@@ -157,6 +159,7 @@ export function LabOrderDetail({ orderId, onClose, onEdit }: LabOrderDetailProps
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-order', orderId] });
       queryClient.invalidateQueries({ queryKey: ['lab-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['lab-orders-history'] });
       queryClient.invalidateQueries({ queryKey: ['lab-stats'] });
       queryClient.invalidateQueries({ queryKey: ['lab-queue'] });
       setShowCancelConfirm(false);
@@ -177,6 +180,7 @@ export function LabOrderDetail({ orderId, onClose, onEdit }: LabOrderDetailProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lab-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['lab-orders-history'] });
       queryClient.invalidateQueries({ queryKey: ['lab-stats'] });
       queryClient.invalidateQueries({ queryKey: ['lab-queue'] });
       onClose();
@@ -291,9 +295,25 @@ export function LabOrderDetail({ orderId, onClose, onEdit }: LabOrderDetailProps
                 <OrderStatusBadge status={order.status} />
                 <PaymentStatusBadge status={order.paymentStatus} />
               </div>
-              <span className="text-lg font-semibold text-neutral-900 dark:text-white">
-                {formatPHP(order.totalAmount)}
-              </span>
+              <div className="text-right">
+                {order.discountAmount && order.discountAmount > 0 ? (
+                  <div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                      Subtotal: {formatPHP(order.subtotal || order.totalAmount)}
+                    </div>
+                    <div className="text-xs text-green-600 dark:text-green-400">
+                      {order.discountName} -{formatPHP(order.discountAmount)}
+                    </div>
+                    <div className="text-lg font-semibold text-neutral-900 dark:text-white">
+                      {formatPHP(order.totalAmount)}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-lg font-semibold text-neutral-900 dark:text-white">
+                    {formatPHP(order.totalAmount)}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Action Buttons based on status */}
@@ -315,7 +335,7 @@ export function LabOrderDetail({ orderId, onClose, onEdit }: LabOrderDetailProps
                   href={`/labs/orders/${orderId}/claim-slip`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
                 >
                   <FileText className="h-4 w-4" />
                   View Claim Slip

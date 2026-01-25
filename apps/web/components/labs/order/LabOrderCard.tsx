@@ -25,6 +25,9 @@ interface LabOrderCardProps {
     priority: any;
     placedAt: string;
     totalAmount: number | string;
+    subtotal?: number | string;
+    discountAmount?: number | string;
+    discountName?: string;
     patient?: {
       id: string;
       firstName: string;
@@ -157,13 +160,27 @@ export function LabOrderCard({ order, onClick, compact = false }: LabOrderCardPr
       )}
 
       {/* Footer */}
-      <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800">
-        <span className="text-[11px] text-neutral-500">
-          {formatDistanceToNow(parseDate(order.placedAt), { addSuffix: true })}
-        </span>
-        <span className="font-semibold text-neutral-900 dark:text-white">
-          {formatPrice(order.totalAmount)}
-        </span>
+      <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+        {order.discountAmount && parseFloat(order.discountAmount as string) > 0 && (
+          <div className="mb-2 space-y-0.5 text-[11px]">
+            <div className="flex justify-between text-neutral-600 dark:text-neutral-400">
+              <span>Subtotal</span>
+              <span>{formatPrice(order.subtotal || order.totalAmount)}</span>
+            </div>
+            <div className="flex justify-between text-green-600 dark:text-green-400">
+              <span>{order.discountName}</span>
+              <span>-{formatPrice(order.discountAmount)}</span>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] text-neutral-500">
+            {formatDistanceToNow(parseDate(order.placedAt), { addSuffix: true })}
+          </span>
+          <span className="font-semibold text-neutral-900 dark:text-white">
+            {formatPrice(order.totalAmount)}
+          </span>
+        </div>
       </div>
     </button>
   );
