@@ -1,33 +1,33 @@
-"use client";
+'use client';
 
 import { useAuth, hasRole } from '../components/auth/AuthProvider';
 import { useQuery } from '@tanstack/react-query';
 
 async function fetchDashboardStats() {
-  const today = new Date().toISOString().split('T')[0]
-  
+  const today = new Date().toISOString().split('T')[0];
+
   const [patientsRes, appointmentsRes] = await Promise.all([
     fetch('/api/patients?limit=1'),
-    fetch(`/api/appointments?date=${today}&view=day`)
-  ])
-  
-  const patientsData = await patientsRes.json()
-  const appointmentsData = await appointmentsRes.json()
-  
+    fetch(`/api/appointments?date=${today}&view=day`),
+  ]);
+
+  const patientsData = await patientsRes.json();
+  const appointmentsData = await appointmentsRes.json();
+
   return {
     totalPatients: patientsData.total || 0,
     todaysAppointments: appointmentsData.appointments?.length || 0,
-  }
+  };
 }
 
 export default function DashboardPage() {
   const { session, roles, loading, userId } = useAuth();
-  
+
   const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: fetchDashboardStats,
     refetchInterval: 30000, // Refetch every 30 seconds
-  })
+  });
 
   if (loading) {
     return (
@@ -45,14 +45,14 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white">
             Welcome back
           </h1>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            {session?.user?.email}
-          </p>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400">{session?.user?.email}</p>
         </div>
 
         {/* User Info Card */}
         <div className="bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-sm">
-          <h2 className="text-base font-semibold mb-4 text-neutral-900 dark:text-white">Your Access</h2>
+          <h2 className="text-base font-semibold mb-4 text-neutral-900 dark:text-white">
+            Your Access
+          </h2>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <span className="text-sm text-neutral-500 dark:text-neutral-400 w-20">User ID</span>
@@ -82,15 +82,25 @@ export default function DashboardPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Patients" value={stats?.totalPatients?.toString() || '0'} loading={!stats} />
-          <StatCard title="Today's Appointments" value={stats?.todaysAppointments?.toString() || '0'} loading={!stats} />
+          <StatCard
+            title="Total Patients"
+            value={stats?.totalPatients?.toString() || '0'}
+            loading={!stats}
+          />
+          <StatCard
+            title="Today's Appointments"
+            value={stats?.todaysAppointments?.toString() || '0'}
+            loading={!stats}
+          />
           <StatCard title="Pending Lab Results" value="0" />
           <StatCard title="Unpaid Invoices" value="0" />
         </div>
 
         {/* Module Cards */}
         <div>
-          <h2 className="text-base font-semibold mb-4 text-neutral-900 dark:text-white">Quick Access</h2>
+          <h2 className="text-base font-semibold mb-4 text-neutral-900 dark:text-white">
+            Quick Access
+          </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Patients Module */}
             <ModuleCard
@@ -110,8 +120,8 @@ export default function DashboardPage() {
               available={false}
             />
 
-            {/* Labs Module - LabTech, Provider, Admin */}
-            {hasRole(roles, ['LabTech', 'Provider', 'Admin']) && (
+            {/* Labs Module - LabTech, Provider, Admin, Frontdesk */}
+            {hasRole(roles, ['LabTech', 'Provider', 'Admin', 'Frontdesk']) && (
               <ModuleCard
                 title="Laboratory"
                 description="Lab orders and results"
@@ -183,9 +193,7 @@ function ModuleCard({
           </span>
         )}
       </div>
-      <h3 className="text-sm font-semibold mb-1.5 text-neutral-900 dark:text-white">
-        {title}
-      </h3>
+      <h3 className="text-sm font-semibold mb-1.5 text-neutral-900 dark:text-white">{title}</h3>
       <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed">
         {description}
       </p>

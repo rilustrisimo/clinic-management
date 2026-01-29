@@ -37,10 +37,8 @@ export const LeftDock: FC = () => {
         <nav className="flex flex-col gap-0.5">
           {isLoggedIn && (
             <>
-              {/* Dashboard - Only show for non-LabTech and non-Receptionist */}
-              {!hasRole(roles, ['LabTech', 'Receptionist']) && (
-                <NavLink href="/">Dashboard</NavLink>
-              )}
+              {/* Dashboard - Only show for non-LabTech and non-Frontdesk */}
+              {!hasRole(roles, ['LabTech', 'Frontdesk']) && <NavLink href="/">Dashboard</NavLink>}
 
               {/* Patients - Show for all logged in users */}
               <NavLink href="/patients">Patients</NavLink>
@@ -48,8 +46,8 @@ export const LeftDock: FC = () => {
               {/* Appointments - Show for everyone except LabTech */}
               {!hasRole(roles, 'LabTech') && <NavLink href="/appointments">Appointments</NavLink>}
 
-              {/* Labs - Show for LabTech, Receptionist, Provider, and Admin */}
-              {hasRole(roles, ['LabTech', 'Receptionist', 'Provider', 'Admin']) && (
+              {/* Labs - Show for LabTech, Frontdesk, Provider, and Admin */}
+              {hasRole(roles, ['LabTech', 'Frontdesk', 'Provider', 'Admin']) && (
                 <NavLink href="/labs">Laboratory</NavLink>
               )}
 
