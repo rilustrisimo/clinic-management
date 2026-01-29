@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { FC } from 'react';
@@ -8,16 +8,17 @@ export const LeftDock: FC = () => {
   const { session, roles } = useAuth();
   const pathname = usePathname();
   const isLoggedIn = !!session;
-  
+
   const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
     const isActive = pathname === href;
     return (
-      <Link 
+      <Link
         className={`
           px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
-          ${isActive 
-            ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900' 
-            : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
+          ${
+            isActive
+              ? 'bg-neutral-900 text-white dark:bg-white dark:text-neutral-900'
+              : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800'
           }
         `}
         href={href}
@@ -26,7 +27,7 @@ export const LeftDock: FC = () => {
       </Link>
     );
   };
-  
+
   return (
     <aside className="w-56 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 h-[calc(100vh-3rem)] p-3 space-y-6">
       <div>
@@ -36,23 +37,32 @@ export const LeftDock: FC = () => {
         <nav className="flex flex-col gap-0.5">
           {isLoggedIn && (
             <>
-              <NavLink href="/">Dashboard</NavLink>
+              {/* Dashboard - Only show for non-LabTech and non-Receptionist */}
+              {!hasRole(roles, ['LabTech', 'Receptionist']) && (
+                <NavLink href="/">Dashboard</NavLink>
+              )}
+
+              {/* Patients - Show for all logged in users */}
               <NavLink href="/patients">Patients</NavLink>
-              <NavLink href="/appointments">Appointments</NavLink>
-              {hasRole(roles, ['LabTech', 'Provider', 'Admin']) && (
-                <NavLink href="/labs">Labs</NavLink>
+
+              {/* Appointments - Show for everyone except LabTech */}
+              {!hasRole(roles, 'LabTech') && <NavLink href="/appointments">Appointments</NavLink>}
+
+              {/* Labs - Show for LabTech, Receptionist, Provider, and Admin */}
+              {hasRole(roles, ['LabTech', 'Receptionist', 'Provider', 'Admin']) && (
+                <NavLink href="/labs">Laboratory</NavLink>
               )}
-              {hasRole(roles, ['Billing', 'Admin']) && (
-                <NavLink href="/billing">Billing</NavLink>
-              )}
+
+              {/* Billing - Only for Billing and Admin */}
+              {hasRole(roles, ['Billing', 'Admin']) && <NavLink href="/billing">Billing</NavLink>}
+
+              {/* Inventory - Only for Inventory and Admin */}
               {hasRole(roles, ['Inventory', 'Admin']) && (
                 <NavLink href="/inventory">Inventory</NavLink>
               )}
             </>
           )}
-          {!isLoggedIn && (
-            <NavLink href="/login">Sign In</NavLink>
-          )}
+          {!isLoggedIn && <NavLink href="/login">Sign In</NavLink>}
         </nav>
       </div>
 
