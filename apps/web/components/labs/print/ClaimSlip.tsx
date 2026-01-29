@@ -17,6 +17,8 @@ interface ClaimSlipProps {
       mrn?: string | null;
       phone?: string | null;
       email?: string | null;
+      dateOfBirth?: string | null;
+      gender?: string | null;
     };
     items: Array<{
       testName: string;
@@ -111,6 +113,25 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
     }).format(amount);
   };
 
+  const calculateAge = (dateOfBirth: string) => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const formatDateOfBirth = (dateOfBirth: string) => {
+    return new Date(dateOfBirth).toLocaleDateString('en-PH', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   const renderSlipContent = (copyLabel: string) => (
     <div className="claim-slip-page">
       <div className="claim-slip-container bg-white">
@@ -187,6 +208,34 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
               <span className="text-[7px] text-neutral-600">Name:</span>
               <span className="text-[8px] font-medium text-neutral-900">{patientFullName}</span>
             </div>
+            {order.patient.dateOfBirth && (
+              <div className="flex justify-between">
+                <span className="text-[7px] text-neutral-600">Date of Birth:</span>
+                <span className="text-[8px] font-medium text-neutral-900">
+                  {formatDateOfBirth(order.patient.dateOfBirth)}
+                </span>
+              </div>
+            )}
+            {order.patient.dateOfBirth && (
+              <div className="flex justify-between">
+                <span className="text-[7px] text-neutral-600">Age:</span>
+                <span className="text-[8px] font-medium text-neutral-900">
+                  {calculateAge(order.patient.dateOfBirth)} years old
+                </span>
+              </div>
+            )}
+            {order.patient.gender && (
+              <div className="flex justify-between">
+                <span className="text-[7px] text-neutral-600">Gender:</span>
+                <span className="text-[8px] font-medium text-neutral-900">
+                  {order.patient.gender === 'M'
+                    ? 'Male'
+                    : order.patient.gender === 'F'
+                      ? 'Female'
+                      : order.patient.gender}
+                </span>
+              </div>
+            )}
             {order.patient.mrn && (
               <div className="flex justify-between">
                 <span className="text-[7px] text-neutral-600">MRN:</span>
