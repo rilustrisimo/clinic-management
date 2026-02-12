@@ -203,62 +203,56 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
           <h3 className="mb-1 text-[8px] font-semibold uppercase tracking-wider text-neutral-700">
             Patient Information
           </h3>
-          <div className="space-y-0.5">
-            <div className="flex justify-between">
-              <span className="text-[7px] text-neutral-600">Name:</span>
-              <span className="text-[8px] font-medium text-neutral-900">{patientFullName}</span>
-            </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-[8px]">
+            <span>
+              <span className="text-[7px] text-neutral-600">Name: </span>
+              <span className="font-medium text-neutral-900">{patientFullName}</span>
+            </span>
             {order.patient.dob && (
-              <div className="flex justify-between">
-                <span className="text-[7px] text-neutral-600">Date of Birth:</span>
-                <span className="text-[8px] font-medium text-neutral-900">
+              <span>
+                <span className="text-[7px] text-neutral-600">DOB: </span>
+                <span className="font-medium text-neutral-900">
                   {formatDateOfBirth(order.patient.dob)}
                 </span>
-              </div>
+              </span>
             )}
             {order.patient.dob && (
-              <div className="flex justify-between">
-                <span className="text-[7px] text-neutral-600">Age:</span>
-                <span className="text-[8px] font-medium text-neutral-900">
-                  {calculateAge(order.patient.dob)} years old
+              <span>
+                <span className="text-[7px] text-neutral-600">Age: </span>
+                <span className="font-medium text-neutral-900">
+                  {calculateAge(order.patient.dob)}
                 </span>
-              </div>
+              </span>
             )}
             {order.patient.gender && (
-              <div className="flex justify-between">
-                <span className="text-[7px] text-neutral-600">Gender:</span>
-                <span className="text-[8px] font-medium text-neutral-900">
+              <span>
+                <span className="text-[7px] text-neutral-600">Gender: </span>
+                <span className="font-medium text-neutral-900">
                   {order.patient.gender === 'M'
                     ? 'Male'
                     : order.patient.gender === 'F'
                       ? 'Female'
                       : order.patient.gender}
                 </span>
-              </div>
+              </span>
             )}
             {order.patient.mrn && (
-              <div className="flex justify-between">
-                <span className="text-[7px] text-neutral-600">MRN:</span>
-                <span className="font-mono text-[8px] font-medium text-neutral-900">
-                  {order.patient.mrn}
-                </span>
-              </div>
+              <span>
+                <span className="text-[7px] text-neutral-600">MRN: </span>
+                <span className="font-mono font-medium text-neutral-900">{order.patient.mrn}</span>
+              </span>
             )}
             {order.patient.phone && (
-              <div className="flex justify-between">
-                <span className="text-[7px] text-neutral-600">Contact:</span>
-                <span className="text-[8px] font-medium text-neutral-900">
-                  {order.patient.phone}
-                </span>
-              </div>
+              <span>
+                <span className="text-[7px] text-neutral-600">Contact: </span>
+                <span className="font-medium text-neutral-900">{order.patient.phone}</span>
+              </span>
             )}
             {order.patient.email && (
-              <div className="flex justify-between">
-                <span className="text-[7px] text-neutral-600">Email:</span>
-                <span className="text-[8px] font-medium text-neutral-900">
-                  {order.patient.email}
-                </span>
-              </div>
+              <span>
+                <span className="text-[7px] text-neutral-600">Email: </span>
+                <span className="font-medium text-neutral-900">{order.patient.email}</span>
+              </span>
             )}
           </div>
         </div>
@@ -357,8 +351,11 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
           {renderSlipContent('CUSTOMER COPY')}
 
           {/* Dotted Line Separator */}
-          <div className="cut-line my-0 border-t-2 border-dashed border-neutral-400 py-1 text-center">
-            <span className="text-xs text-neutral-500">✂ CUT HERE ✂</span>
+          <div className="cut-line my-2 py-2 text-center">
+            <div className="border-t-2 border-dashed border-neutral-400"></div>
+            <span className="-mt-2.5 inline-block bg-white px-3 text-[9px] text-neutral-400">
+              ✂ CUT HERE ✂
+            </span>
           </div>
 
           {/* Laboratory Copy */}
