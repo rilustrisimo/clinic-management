@@ -57,7 +57,7 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
       }
       .claim-slip-container {
         width: 100%;
-        padding: 0.3cm 0.5cm;
+        padding: 0.2cm 0.5cm;
         font-size: 8px;
         box-sizing: border-box;
       }
@@ -136,12 +136,12 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
     <div className="claim-slip-page">
       <div className="claim-slip-container bg-white">
         {/* Clinic Header */}
-        <div className="mb-3 flex items-start gap-2 border-b border-neutral-900 pb-2">
+        <div className="mb-1.5 flex items-start gap-2 border-b border-neutral-900 pb-1.5">
           <Image
             src="/sjd-logo.png"
             alt="San Jose Medical Diagnostics Logo"
-            width={50}
-            height={50}
+            width={40}
+            height={40}
             className="rounded"
           />
           <div className="flex-1">
@@ -153,13 +153,13 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
         </div>
 
         {/* Document Title */}
-        <div className="mb-2 text-center">
+        <div className="mb-1.5 text-center">
           <h2 className="text-xs font-semibold text-neutral-900">LABORATORY CLAIM SLIP</h2>
           <p className="text-[8px] text-neutral-600">Official Payment Receipt</p>
         </div>
 
         {/* Order Information */}
-        <div className="mb-3 grid grid-cols-4 gap-2 rounded bg-neutral-50 p-2">
+        <div className="mb-2 grid grid-cols-4 gap-2 rounded bg-neutral-50 p-1.5">
           <div>
             <p className="text-[7px] font-medium uppercase tracking-wider text-neutral-500">
               Order Number
@@ -296,46 +296,31 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
 
         {/* Payment Confirmation */}
         {order.paidAt && (
-          <div className="mb-2 rounded bg-green-50 p-1">
+          <div className="mb-1 rounded bg-green-50 px-1.5 py-0.5">
             <div className="flex items-center gap-1">
-              <svg className="h-3 w-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="h-2.5 w-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   fillRule="evenodd"
                   d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
                   clipRule="evenodd"
                 />
               </svg>
-              <div>
-                <p className="text-[8px] font-semibold text-green-900">PAYMENT CONFIRMED</p>
-                <p className="text-[7px] text-green-700">
-                  Please proceed to the laboratory for specimen collection
-                </p>
-              </div>
+              <p className="text-[8px] font-semibold text-green-900">
+                PAYMENT CONFIRMED{' '}
+                <span className="font-normal text-green-700">
+                  — Please proceed to the laboratory for specimen collection
+                </span>
+              </p>
             </div>
           </div>
         )}
 
-        {/* Instructions */}
-        <div className="mb-2 rounded border border-neutral-300 bg-neutral-50 p-1">
-          <h3 className="mb-0.5 text-[8px] font-semibold text-neutral-900">
-            Important Instructions:
-          </h3>
-          <ul className="list-inside list-disc space-y-0 text-[7px] text-neutral-700">
-            <li>Present this claim slip to the Medical Technologist</li>
-            <li>Follow fasting requirements if applicable</li>
-            <li>Results will be available within 24-48 hours</li>
-            <li>You will be notified via email/SMS when results are ready</li>
-          </ul>
-        </div>
-
         {/* Footer */}
-        <div className="mt-2 border-t border-neutral-300 pt-1 text-center">
+        <div className="mt-1 border-t border-neutral-300 pt-1 text-center">
           <p className="text-[8px] font-semibold text-neutral-900">{copyLabel}</p>
           <p className="text-[7px] text-neutral-500">
-            This is an official receipt from San Jose Medical Diagnostics & Health Solutions
-          </p>
-          <p className="mt-0.5 text-[7px] text-neutral-500">
-            For inquiries, please contact the clinic reception
+            Present this slip to the Medical Technologist &bull; Results available within 24-48
+            hours
           </p>
         </div>
       </div>
@@ -351,7 +336,7 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
           {renderSlipContent('CUSTOMER COPY')}
 
           {/* Dotted Line Separator */}
-          <div className="cut-line my-2 py-2 text-center">
+          <div className="cut-line my-1 py-1 text-center">
             <div className="border-t-2 border-dashed border-neutral-400"></div>
             <span className="-mt-2.5 inline-block bg-white px-3 text-[9px] text-neutral-400">
               ✂ CUT HERE ✂
