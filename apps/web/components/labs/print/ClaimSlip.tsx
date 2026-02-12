@@ -17,7 +17,7 @@ interface ClaimSlipProps {
       mrn?: string | null;
       phone?: string | null;
       email?: string | null;
-      dateOfBirth?: string | null;
+      dob?: string | null;
       gender?: string | null;
     };
     items: Array<{
@@ -208,19 +208,19 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
               <span className="text-[7px] text-neutral-600">Name:</span>
               <span className="text-[8px] font-medium text-neutral-900">{patientFullName}</span>
             </div>
-            {order.patient.dateOfBirth && (
+            {order.patient.dob && (
               <div className="flex justify-between">
                 <span className="text-[7px] text-neutral-600">Date of Birth:</span>
                 <span className="text-[8px] font-medium text-neutral-900">
-                  {formatDateOfBirth(order.patient.dateOfBirth)}
+                  {formatDateOfBirth(order.patient.dob)}
                 </span>
               </div>
             )}
-            {order.patient.dateOfBirth && (
+            {order.patient.dob && (
               <div className="flex justify-between">
                 <span className="text-[7px] text-neutral-600">Age:</span>
                 <span className="text-[8px] font-medium text-neutral-900">
-                  {calculateAge(order.patient.dateOfBirth)} years old
+                  {calculateAge(order.patient.dob)} years old
                 </span>
               </div>
             )}

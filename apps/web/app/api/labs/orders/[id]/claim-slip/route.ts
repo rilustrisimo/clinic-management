@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           mrn,
           phone,
           email,
-          dateOfBirth,
+          dob,
           gender
         ),
         items:LabOrderItem(
