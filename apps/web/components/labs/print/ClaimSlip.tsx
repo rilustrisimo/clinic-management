@@ -98,8 +98,18 @@ export function ClaimSlip({ order }: ClaimSlipProps) {
     .filter(Boolean)
     .join(' ');
 
+  const normalizeDateString = (value: string) => {
+    const trimmed = value.trim();
+    const hasTimeZone = /[zZ]|[+-]\d{2}:\d{2}$/.test(trimmed);
+    if (hasTimeZone) return trimmed;
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(trimmed)) {
+      return `${trimmed.replace(' ', 'T')}Z`;
+    }
+    return trimmed;
+  };
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-PH', {
+    return new Date(normalizeDateString(dateString)).toLocaleString('en-PH', {
       dateStyle: 'medium',
       timeStyle: 'short',
       timeZone: 'Asia/Manila',

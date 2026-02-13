@@ -31,13 +31,24 @@ interface LabOrderDetailProps {
 }
 
 // Helper to safely parse date
+function normalizeDateString(value: string): string {
+  const trimmed = value.trim();
+  const hasTimeZone = /[zZ]|[+-]\d{2}:\d{2}$/.test(trimmed);
+  if (hasTimeZone) return trimmed;
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(trimmed)) {
+    return `${trimmed.replace(' ', 'T')}Z`;
+  }
+  return trimmed;
+}
+
 function parseDate(dateValue: string | Date | null | undefined): Date {
   if (!dateValue) return new Date();
   if (dateValue instanceof Date) return dateValue;
+  const normalized = normalizeDateString(dateValue);
   try {
-    return parseISO(dateValue);
+    return parseISO(normalized);
   } catch {
-    return new Date(dateValue);
+    return new Date(normalized);
   }
 }
 
