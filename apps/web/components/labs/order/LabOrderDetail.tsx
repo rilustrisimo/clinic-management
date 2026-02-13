@@ -41,6 +41,18 @@ function parseDate(dateValue: string | Date | null | undefined): Date {
   }
 }
 
+const formatDateTimeManila = (dateValue: string | Date | null | undefined) => {
+  const date = parseDate(dateValue);
+  return date.toLocaleString('en-PH', {
+    timeZone: 'Asia/Manila',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
 const formatPHP = (amount: number | string) =>
   new Intl.NumberFormat('en-PH', {
     style: 'currency',
@@ -565,7 +577,7 @@ function TimelineItem({ label, time, notes }: { label: string; time: string; not
       <div className="mt-1 h-2 w-2 flex-shrink-0 rounded-full bg-neutral-400" />
       <div className="flex-1">
         <p className="text-sm font-medium text-neutral-700 dark:text-neutral-300">{label}</p>
-        <p className="text-xs text-neutral-500">{format(parseDate(time), 'MMM d, yyyy h:mm a')}</p>
+        <p className="text-xs text-neutral-500">{formatDateTimeManila(time)}</p>
         {notes && <p className="mt-1 text-xs text-neutral-600 dark:text-neutral-400">{notes}</p>}
       </div>
     </div>
@@ -687,7 +699,7 @@ function ClaimSlipModal({ order, onClose }: ClaimSlipModalProps) {
 
         <div class="section">
           <div class="section-title">Order Details</div>
-          <div class="info-row"><span>Date:</span><span>${format(parseDate(order.placedAt), 'MMM d, yyyy h:mm a')}</span></div>
+          <div class="info-row"><span>Date:</span><span>${formatDateTimeManila(order.placedAt)}</span></div>
           <div class="info-row"><span>Priority:</span><span style="text-transform: capitalize;">${order.priority}</span></div>
         </div>
 
@@ -714,7 +726,7 @@ function ClaimSlipModal({ order, onClose }: ClaimSlipModalProps) {
           order.paymentStatus === 'paid'
             ? `
           <div class="paid-stamp">
-            PAID - ${order.paidAt ? format(parseDate(order.paidAt), 'MMM d, yyyy h:mm a') : 'Confirmed'}
+            PAID - ${order.paidAt ? formatDateTimeManila(order.paidAt) : 'Confirmed'}
           </div>
         `
             : ''
@@ -806,7 +818,7 @@ function ClaimSlipModal({ order, onClose }: ClaimSlipModalProps) {
             <div className="flex justify-between text-xs">
               <span className="text-neutral-500">Date:</span>
               <span className="text-neutral-900 dark:text-white">
-                {format(parseDate(order.placedAt), 'MMM d, yyyy h:mm a')}
+                {formatDateTimeManila(order.placedAt)}
               </span>
             </div>
             <div className="flex justify-between text-xs">
@@ -847,8 +859,7 @@ function ClaimSlipModal({ order, onClose }: ClaimSlipModalProps) {
           {order.paymentStatus === 'paid' && (
             <div className="mt-4 rounded-lg border-2 border-green-600 bg-green-50 p-2 text-center dark:bg-green-900/20">
               <span className="font-bold text-green-700 dark:text-green-400">
-                PAID -{' '}
-                {order.paidAt ? format(parseDate(order.paidAt), 'MMM d, yyyy h:mm a') : 'Confirmed'}
+                PAID - {order.paidAt ? formatDateTimeManila(order.paidAt) : 'Confirmed'}
               </span>
             </div>
           )}
